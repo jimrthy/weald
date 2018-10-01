@@ -188,8 +188,8 @@ They take 2 to 4 parameters:
    part of the goal is getting away from that.
 1. Details
 
-   Arbitrary hashmap. At least it's something you could at least
-   theoretically interact with programmatically.
+   Arbitrary hashmap. At least it's something you can
+   interact with programmatically via the REPL.
 
 (exception) is special and different. It takes a Throwable instance
 as its second parameter and dumps all the gory details about it (like
