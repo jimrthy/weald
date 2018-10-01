@@ -1,6 +1,14 @@
 # Weald
 
-TODO: Need a picture and quote that are totally unrelated
+**weald** noun
+\ ˈwēld  \
+Definition of Weald
+1. : a heavily wooded area : FOREST
+
+the Weald of Kent
+2. : a wild or uncultivated usually upland region
+
+A bunch of logs waiting to be cut
 
 ## Motivation
 
