@@ -2,8 +2,13 @@
 (def version "0.0.1-SNAPSHOT")
 
 (set-env! :resource-paths #{"src"}
-          :dependencies '[[adzerk/boot-test "RELEASE" :scope "test"]
-                          [org.clojure/clojure "1.9.0" :exclusions [org.clojure/spec.alpha]]
+          :dependencies '[[adzerk/boot-cljs "2.1.5" :scope "test"]
+                          [adzerk/boot-test "RELEASE" :scope "test"]
+                          [binaryage/devtools "0.9.10" :scope "test" :exclusions [org.clojure/tools.reader]]
+                          ;; Q: Which features of 1.9.0 does this really need?
+                          ;; A: spec
+                          [org.clojure/clojure "1.9.0" :exclusions [org.clojure/spec.alpha] :scope "provided"]
+                          [org.clojure/clojurescript "1.9.946" :scope "provided"]
                           [org.clojure/spec.alpha "0.2.176"]
                           ;; FIXME: Move this to the testing task.
                           ;; Don't want to depend on it in general.
@@ -13,14 +18,16 @@
                           [samestep/boot-refresh "0.1.0" :scope "test" :exclusions [org.clojure/clojure]]
                           [tolitius/boot-check "0.1.9" :scope "test" :exclusions [org.clojure/clojure]]])
 
+(require '[adzerk.boot-cljs :refer [cljs]])
+
 (task-options!
  aot {:namespace   #{'frereth-cp.server 'frereth-cp.client}}
  pom {:project     project
       :version     version
-      :description "Implement CurveCP in clojure"
+      :description "Functional logging"
       ;; TODO: Add a real website
-      :url         "https://github.com/jimrthy/frereth-cp"
-      :scm         {:url "https://github.com/jimrthy/frereth-cp"}
+      :url         "https://github.com/jimrthy/weald"
+      :scm         {:url "https://github.com/jimrthy/weald"}
       ;; Q: Should this go into public domain like the rest
       ;; of the pieces?
       :license     {"Eclipse Public License"
@@ -39,7 +46,13 @@
   ;; to -main, as opposed to what happens with `boot run`
   ;; TODO: Eliminate this discrepancy
   (let [dir (if (seq dir) dir #{"target"})]
-    (comp (aot) (pom) (jar) (target :dir dir))))
+    (comp (aot)
+          ;; FIXME: These should probably be the release versions instead
+          (cljs :ids #{"js/node-dev"})
+          (cljs :ids #{"js/browser-dev"})
+          (pom)
+          (jar)
+          (target :dir dir))))
 
 (deftask check-conflicts
   "Verify there are no dependency conflicts."

@@ -1,0 +1,6 @@
+{:compiler-options {:asset-path "js/node-logger.out"
+                    :external-config {:devtools/config {:features-to-install [:formatters :hints]}}
+                    :optimizations :none
+                    :parallel-build true
+                    :preloads [devtools.preload]
+                    :target :nodejs}}

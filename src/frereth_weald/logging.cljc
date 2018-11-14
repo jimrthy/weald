@@ -256,21 +256,22 @@
         (comment (throw ex))
         injected))))
 
-#?(:clj defrecord OutputWriterLogger [writer]
-   Logger
-   ;; According to stackoverflow (and the java source
-   ;; code that was provided as evidence), BufferedWriter
-   ;; .write and .flush are both synchronized and thus
-   ;; safe to use from multiple threads at once.
-   (log! [{writer :writer
-           :as this}
-          entry]
-         (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")
-               formatted (format-log-string get-caller-stack entry)]
-           (.write writer formatted)))
-   (flush! [{^BufferedWriter writer :writer
-             :as this}]
-           (.flush writer))
+#?@(:clj
+    (defrecord OutputWriterLogger [writer]
+      Logger
+      ;; According to stackoverflow (and the java source
+      ;; code that was provided as evidence), BufferedWriter
+      ;; .write and .flush are both synchronized and thus
+      ;; safe to use from multiple threads at once.
+      (log! [{writer :writer
+              :as this}
+             entry]
+        (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")
+              formatted (format-log-string get-caller-stack entry)]
+          (.write writer formatted)))
+      (flush! [{^BufferedWriter writer :writer
+                :as this}]
+        (.flush writer)))
 
    (defrecord StreamLogger [stream]
      ;; I think this is mostly correct,
@@ -318,7 +319,7 @@
      (flush! [_]
        (send state-agent #(update % ::flush-count inc))))
 
-   (defrecord StdErrLogger [state-agent]
+   (defrecord StdErrLogger [state-atom]
      ;; Really just a StreamLogger
      ;; where stream is STDOUT.
      ;; But it's simple/easy enough that it seemed
@@ -347,19 +348,24 @@
      ;; A: Not according to stackoverflow.
      ;; It flushes itself after every CR/LF
      (flush! [_]
-       (send state-agent #(update % ::flush-count inc))))
-   :cljs (defrecord ConsoleLogger []
-           Logger
-           (log! [_ entry]
-             (let [func]
-               (condp = (::label entry)
-                 ::trace (partial console.debug "TRACE: ")
-                 ::debug console.debug
-                 ::info console.log
-                 ::warn console.warn
-                 ::error console.error
-                 ::exception (partial console.error "EXCEPTION: ")
-                 ::fatal (partial console.error "FATAL: "))))))
+       (swap! state-agent #(update % ::flush-count inc)))))
+
+#?@(:cljs
+    (defrecord ConsoleLogger []
+      Logger
+      (log! [_ entry]
+        (let [func
+              (condp = (::label entry)
+                ::trace (partial console.debug "TRACE: ")
+                ::debug console.debug
+                ::info console.log
+                ::warn console.warn
+                ::error console.error
+                ::exception (partial console.error "EXCEPTION: ")
+                ::fatal (partial console.error "FATAL: "))]
+          (func entry)))
+      (flush! [_]
+        (send state-agent #(update % ::flush-count inc)))))
 
 (s/fdef merge-entries
         :args (s/cat :xs ::entries
