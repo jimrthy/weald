@@ -256,7 +256,7 @@
         (comment (throw ex))
         injected))))
 
-#?@(:clj
+#?(:clj
     (defrecord OutputWriterLogger [writer]
       Logger
       ;; According to stackoverflow (and the java source
@@ -271,87 +271,87 @@
           (.write writer formatted)))
       (flush! [{^BufferedWriter writer :writer
                 :as this}]
-        (.flush writer)))
+        (.flush writer))))
 
-   (defrecord StreamLogger [stream]
-     ;; I think this is mostly correct,
-     ;; but I haven't actually tried testing it
-     ;; And, realistically, contrasted with
-     ;; OutputWriterLogger, this should probably
-     ;; never be used.
-     Logger
-     (log! [{^OutputStream stream :stream
-             :as this}
-            entry]
-       (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")
-             formatted (format-log-string get-caller-stack entry)]
-         (.write stream formatted)))
-     (flush! [{^OutputStream stream :stream
-               :as this}]
-       (.flush stream)))
+#?(:clj (defrecord StreamLogger [stream]
+          ;; I think this is mostly correct,
+          ;; but I haven't actually tried testing it
+          ;; And, realistically, contrasted with
+          ;; OutputWriterLogger, this should probably
+          ;; never be used.
+          Logger
+          (log! [{^OutputStream stream :stream
+                  :as this}
+                 entry]
+            (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")
+                  formatted (format-log-string get-caller-stack entry)]
+              (.write stream formatted)))
+          (flush! [{^OutputStream stream :stream
+                    :as this}]
+            (.flush stream))))
 
-   (defrecord StdOutLogger [state-agent]
-     ;; Really just a StreamLogger
-     ;; where stream is STDOUT.
-     ;; But it's simple/easy enough that it seemed
-     ;; worth writing this way instead
-     Logger
-     (log! [{:keys [:state-agent]
-             :as this} msg]
-       (when-let [ex (agent-error state-agent)]
-         (println "Logging Agent Failed:\n"
-                  (exception-details ex))
-         (let [last-state @state-agent]
-           (println "Logging Agent State:\n"
-                    last-state)
-           (restart-agent state-agent last-state)))
-       ;; Creating an exception that we're going to throw away
-       ;; for almost every log message seems really wasteful.
-       (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")]
-         (send state-agent (fn [state entry]
-                             (print (format-log-string get-caller-stack entry))
-                             state)
-               msg)))
-     ;; Q: Is there any point to calling .flush
-     ;; on STDOUT?
-     ;; A: Not according to stackoverflow.
-     ;; It flushes itself after every CR/LF
-     (flush! [_]
-       (send state-agent #(update % ::flush-count inc))))
+#? (:clj (defrecord StdOutLogger [state-agent]
+           ;; Really just a StreamLogger
+           ;; where stream is STDOUT.
+           ;; But it's simple/easy enough that it seemed
+           ;; worth writing this way instead
+           Logger
+           (log! [{:keys [:state-agent]
+                   :as this} msg]
+             (when-let [ex (agent-error state-agent)]
+               (println "Logging Agent Failed:\n"
+                        (exception-details ex))
+               (let [last-state @state-agent]
+                 (println "Logging Agent State:\n"
+                          last-state)
+                 (restart-agent state-agent last-state)))
+             ;; Creating an exception that we're going to throw away
+             ;; for almost every log message seems really wasteful.
+             (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")]
+               (send state-agent (fn [state entry]
+                                   (print (format-log-string get-caller-stack entry))
+                                   state)
+                     msg)))
+           ;; Q: Is there any point to calling .flush
+           ;; on STDOUT?
+           ;; A: Not according to stackoverflow.
+           ;; It flushes itself after every CR/LF
+           (flush! [_]
+             (send state-agent #(update % ::flush-count inc)))))
 
-   (defrecord StdErrLogger [state-atom]
-     ;; Really just a StreamLogger
-     ;; where stream is STDOUT.
-     ;; But it's simple/easy enough that it seemed
-     ;; worth writing this way instead
-     Logger
-     (log! [{:keys [:state-agent]
-             :as this} msg]
-       (binding [*out* *err*]
-         (when-let [ex (agent-error state-agent)]
-           (println "Logging Agent Failed:\n"
-                    (exception-details ex))
-           ;; Q: What are the odds this will work?
-           (let [last-state @state-agent]
-             (println "Logging Agent State:\n"
-                      last-state)
-             (restart-agent state-agent last-state)))
-         ;; Creating an exception that we're going to throw away
-         ;; for almost every log message seems really wasteful.
-         (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")]
-           (send state-agent (fn [state entry]
-                               (print (format-log-string get-caller-stack entry))
-                               state)
-                 msg))))
-     ;; Q: Is there any point to calling .flush
-     ;; on STDOUT?
-     ;; A: Not according to stackoverflow.
-     ;; It flushes itself after every CR/LF
-     (flush! [_]
-       (swap! state-agent #(update % ::flush-count inc)))))
+#?(:clj (defrecord StdErrLogger [state-agent]
+          ;; Really just a StreamLogger
+          ;; where stream is STDOUT.
+          ;; But it's simple/easy enough that it seemed
+          ;; worth writing this way instead
+          Logger
+          (log! [{:keys [:state-agent]
+                  :as this} msg]
+            (binding [*out* *err*]
+              (when-let [ex (agent-error state-agent)]
+                (println "Logging Agent Failed:\n"
+                         (exception-details ex))
+                ;; Q: What are the odds this will work?
+                (let [last-state @state-agent]
+                  (println "Logging Agent State:\n"
+                           last-state)
+                  (restart-agent state-agent last-state)))
+              ;; Creating an exception that we're going to throw away
+              ;; for almost every log message seems really wasteful.
+              (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")]
+                (send state-agent (fn [state entry]
+                                    (print (format-log-string get-caller-stack entry))
+                                    state)
+                      msg))))
+          ;; Q: Is there any point to calling .flush
+          ;; on STDOUT?
+          ;; A: Not according to stackoverflow.
+          ;; It flushes itself after every CR/LF
+          (flush! [_]
+            (swap! state-agent #(update % ::flush-count inc)))))
 
-#?@(:cljs
-    (defrecord ConsoleLogger []
+#?(:cljs
+    (defrecord ConsoleLogger [agent-atom]
       Logger
       (log! [_ entry]
         (let [func
@@ -365,7 +365,7 @@
                 ::fatal (partial console.error "FATAL: "))]
           (func entry)))
       (flush! [_]
-        (send state-agent #(update % ::flush-count inc)))))
+        (swap! state-atom #(update % ::flush-count inc)))))
 
 (s/fdef merge-entries
         :args (s/cat :xs ::entries
@@ -436,23 +436,28 @@
   ([context]
    (init context (get-official-clock))))
 
-(defn file-writer-factory
-  [file-name]
-  (io/make-parents file-name)
-  (let [writer (BufferedWriter. (FileWriter. file-name))]
-    (->OutputWriterLogger writer)))
+#?(:clj (defn file-writer-factory
+          [file-name]
+          (io/make-parents file-name)
+          (let [writer (BufferedWriter. (FileWriter. file-name))]
+            (->OutputWriterLogger writer))))
 
-(defn std-out-log-factory
-  []
-  (->StdOutLogger (agent {::flush-count 0})))
+#?(:clj (defn std-out-log-factory
+          []
+          ;; Q: Do agents really make sense here?
+          (->StdOutLogger (agent {::flush-count 0}))))
 
-(defn std-err-log-factory
-  []
-  (->StdErrLogger (agent {::flush-count 0})))
+#?(:clj (defn std-err-log-factory
+          []
+          (->StdErrLogger (agent {::flush-count 0}))))
 
-(defn stream-log-factory
-  [stream]
-  (->StreamLogger stream))
+#?(:clj (defn stream-log-factory
+          [stream]
+          (->StreamLogger stream)))
+
+#?(:cljs (defn console-log-factory
+           []
+           (->ConsoleLogger (atom {::flush-count 0}))))
 
 (s/fdef flush-logs!
         :args (s/cat :logger ::logger
