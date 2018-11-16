@@ -4,6 +4,7 @@
             [#?(:clj clojure.test
                 :cljs cljs.test) #?(:clj :refer
                                     :cljs refer-macros) (deftest is testing)]
+            [frereth-weald :as weald]
             [frereth-weald.logging :as log]))
 
 (defn set-up
@@ -16,9 +17,9 @@
   (let [log-1 (set-up ::check-fork)
         [log-1 log-2] (log/fork log-1 ::forked)]
 
-    (is (= (::log/lamport log-1)
-           (::log/lamport log-2)))
-    (let [forked-entries (::log/entries log-2)]
+    (is (= (::weald/lamport log-1)
+           (::weald/lamport log-2)))
+    (let [forked-entries (::weald/entries log-2)]
       (is (= (count forked-entries) 1)))))
 
 (deftest merge-entries

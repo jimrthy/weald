@@ -1,13 +1,15 @@
 (ns frereth-weald.logging
   "Functional logging mechanism"
   (:require #?(:clj [clojure.java.io :as io])
-            #?(:clj [cljs.repl :as repl])
+            #?(:cljs [cljs.repl :as repl])
             [#?(:clj clojure.spec.alpha
                 :cljs cljs.spec.alpha) :as s]
             [#?(:clj clojure.stacktrace
                 :cljs cljs.stacktrace) :as s-t]
             [clojure.string :as str]
-            #?(:clj [frereth-weald.logger-macro :refer [deflogger]]))
+            [frereth-weald.logger-macro :refer [#?(:clj deflogger)
+                                                add-log-entry]]
+            [frereth-weald :as weald])
   #?(:clj (:import clojure.lang.ExceptionInfo
                   [java.io
                    BufferedWriter
@@ -21,14 +23,6 @@
 
 (s/def ::atom #(instance? (#?(:clj class
                               :cljs type) (atom nil)) %))
-(s/def ::ctx-atom (s/or :int int?
-                        :keyword keyword?
-                        :string string?
-                        :symbol symbol?
-                        :uuid uuid?))
-(s/def ::ctx-seq (s/coll-of ::ctx-atom))
-(s/def ::context (s/or :atom ::ctx-atom
-                       :seq ::ctx-seq))
 
 ;;;; Implement this for your side-effects
 (defprotocol Logger
@@ -54,52 +48,8 @@
 (s/def ::log-builder (s/fspec :args nil
                               :ret ::logger))
 
-(def log-level-values
-  "name -> priority to assist in prioritizing and filtering"
-  {::trace 100
-   ::debug 200
-   ::info 300
-   ::warn 400
-   ::error 500
-   ::exception 600
-   ::fatal 700})
-(def log-levels (set (keys log-level-values)))
-(s/def ::level log-levels)
-
-(s/def ::label keyword?)
-
-;; Go with milliseconds since epoch
-;; Note that these next two are *totally* distinct
-(s/def ::time nat-int?)
-;;; Honestly, this doesn't belong in here.
-;;; I can't add a clock to the CurveCP protocol
-;;; without breaking it (which doesn't seem like
-;;; a terrible idea), but I can make it easily
-;;; available to implementers.
-;;; For that matter, I might be able to shove one
-;;; into the
-;;; the zero-padding bytes of each Message.
-(s/def ::lamport nat-int?)
-
-(s/def ::message string?)
-
-(s/def ::details any?)
-
-(s/def ::entry (s/keys :req [::level
-                             ::label
-                             ::lamport
-                             ::time
-                             ::message]
-                       :opt [::details]))
-
-(s/def ::entries (s/coll-of ::entry))
-
-(s/def ::state (s/keys :req [::context
-                             ::entries
-                             ::lamport]))
-
 (s/def ::state-atom (s/and ::atom
-                           #(s/valid? ::state (deref %))))
+                           #(s/valid? ::weald/state (deref %))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Internal
@@ -147,7 +97,7 @@
                                     "Failed to write a log"
                                     {::immediate (exception-details ex)
                                      ::caller (exception-details caller-stack-holder)
-                                     ::redacted-problem (prn-str (dissoc entry ::details))}))]
+                                     ::redacted-problem (prn-str (dissoc entry ::weald/details))}))]
         ;; Q: What's the best thing to do here?
         (comment (throw ex))
         injected))))
@@ -251,27 +201,27 @@
       Logger
       (log! [_ entry]
         (let [func
-              (condp = (::label entry)
-                ::trace (partial console.debug "TRACE: ")
-                ::debug console.debug
-                ::info console.log
-                ::warn console.warn
-                ::error console.error
-                ::exception (partial console.error "EXCEPTION: ")
-                ::fatal (partial console.error "FATAL: "))]
+              (condp = (::weald/label entry)
+                ::weald/trace (partial console.debug "TRACE: ")
+                ::weald/debug console.debug
+                ::weald/info console.log
+                ::weald/warn console.warn
+                ::weald/error console.error
+                ::weald/exception (partial console.error "EXCEPTION: ")
+                ::weald/fatal (partial console.error "FATAL: "))]
           (func entry)))
       (flush! [_]
         (swap! state-atom #(update % ::flush-count inc)))))
 
 (s/fdef merge-entries
-        :args (s/cat :xs ::entries
-                     :ys ::entries)
+        :args (s/cat :xs ::weald/entries
+                     :ys ::weald/entries)
         :fn (fn [{:keys [:args :ret]}]
               (let [{:keys [:xs :ys]} args
                     combined (distinct (concat xs ys))]
                 (= (count combined)
                    (count ret))))
-        :ret ::entries)
+        :ret ::weald/entries)
 (defn merge-entries
   "Note that this is a relatively expensive operation"
   [xs ys]
@@ -291,8 +241,8 @@
   ;; exceptions
   (let [result (concat xs ys)]
     (vec (distinct (sort (fn [x y]
-                           (compare [(::lamport x) (::time x) (log-level-values (::level x)) (::message x)]
-                                    [(::lamport y) (::time y) (log-level-values (::level y)) (::message y)]))
+                           (compare [(::weald/lamport x) (::weald/time x) (weald/log-level-values (::weald/level x)) (::weald/message x)]
+                                    [(::weald/lamport y) (::weald/time y) (weald/log-level-values (::weald/level y)) (::weald/message y)]))
                          result)))))
 
 
@@ -321,14 +271,14 @@
 
 (declare get-official-clock)
 (s/fdef init
-        :args (s/cat :context ::context
-                     :start-time ::lamport)
-        :ret ::state)
+        :args (s/cat :context ::weald/context
+                     :start-time ::weald/lamport)
+        :ret ::weald/state)
 (defn init
   ([context start-clock]
-   {::entries []
-    ::lamport start-clock
-    ::context context})
+   {::weald/entries []
+    ::weald/lamport start-clock
+    ::weald/context context})
   ([context]
    (init context (get-official-clock))))
 
@@ -357,8 +307,8 @@
 
 (s/fdef flush-logs!
         :args (s/cat :logger ::logger
-                     :logs ::state)
-        :ret ::state)
+                     :logs ::weald/state)
+        :ret ::weald/state)
 ;; Do what I can to keep local clocks synchronized
 (let [my-lamport (atom 0)]
   (defn get-official-clock
@@ -368,14 +318,14 @@
   (comment (get-official-clock))
 
   (s/fdef do-sync-clock
-          :args (s/cat :log-state ::state)
-          :ret ::state)
+          :args (s/cat :log-state ::weald/state)
+          :ret ::weald/state)
   (defn do-sync-clock
     "Synchronize my clock with a state's"
     [log-state]
-    (let [{:keys [::lamport]} log-state]
+    (let [{:keys [::weald/lamport]} log-state]
       (swap! my-lamport max lamport)
-      (assoc log-state ::lamport @my-lamport)))
+      (assoc log-state ::weald/lamport @my-lamport)))
 
   (defn flush-logs!
     "For the side-effects to write the accumulated logs.
@@ -385,65 +335,65 @@
     ;; So I can thread-first log-state through
     ;; log calls into this
     [logger
-     {:keys [::context]
+     {:keys [::weald/context]
       :as log-state}]
     ;; Honestly, there should be an agent that handles this
     ;; so we don't block the calling thread.
     ;; The i/o costs should be quite a bit higher than
     ;; the agent overhead...though
     ;; a go-loop would be more efficient
-    (let [{:keys [::lamport]
+    (let [{:keys [::weald/lamport]
            :as log-state} (add-log-entry log-state
                                          ::trace
                                          ::top
                                          "flushing"
-                                         {::context context})]
-      (doseq [message (::entries log-state)]
+                                         {::weald/context context})]
+      (doseq [message (::weald/entries log-state)]
         (log! logger message))
       (flush! logger)
 
       (assoc (do-sync-clock log-state)
-             ::entries []))))
+             ::weald/entries []))))
 
 (s/fdef synchronize
-        :args (s/cat :lhs ::state
-                     :rhs ::state)
+        :args (s/cat :lhs ::weald/state
+                     :rhs ::weald/state)
         :fn (s/and #(let [{:keys [:args :ret]} %
                           {:keys [:lhs :rhs]} args]
                       ;; Only changes the lamport tick of the
                       ;; clock states
-                      (and (= (-> ret first (dissoc ::lamport))
-                              (dissoc lhs ::lamport))
-                           (= (-> ret second (dissoc ::lamport))
-                              (dissoc rhs ::lamport))))
+                      (and (= (-> ret first (dissoc ::weald/lamport))
+                              (dissoc lhs ::weald/lamport))
+                           (= (-> ret second (dissoc ::weald/lamport))
+                              (dissoc rhs ::weald/lamport))))
                    #(let [{:keys [:args :ret]} %
                           {:keys [:lhs :rhs]} args]
-                      (= (ret first ::lamport)
-                         (ret second ::lamport)
-                         (max (::lamport lhs)
-                              (::lamport rhs)))))
+                      (= (ret first ::weald/lamport)
+                         (ret second ::weald/lamport)
+                         (max (::weald/lamport lhs)
+                              (::weald/lamport rhs)))))
         ;; Yes. It really is a pair of them.
-        :ret (s/tuple ::state ::state))
+        :ret (s/tuple ::weald/state ::weald/state))
 (defn synchronize
   "Fix 2 clocks that have probably drifted apart"
-  [{l-clock ::lamport
-    l-ctx ::context
+  [{l-clock ::weald/lamport
+    l-ctx ::weald/context
     :as lhs}
-   {r-clock ::lamport
-    r-ctx ::context
+   {r-clock ::weald/lamport
+    r-ctx ::weald/context
     :as rhs}]
   {:pre [l-clock
          r-clock]}
   (let [synced (max l-clock r-clock)
-        lhs (assoc lhs ::lamport synced)
-        rhs (assoc rhs ::lamport synced)]
-    [(debug lhs ::synchronized "" {::context l-ctx})
-     (debug rhs ::synchronized "" {::context r-ctx})]))
+        lhs (assoc lhs ::weald/lamport synced)
+        rhs (assoc rhs ::weald/lamport synced)]
+    [(debug lhs ::synchronized "" {::weald/context l-ctx})
+     (debug rhs ::synchronized "" {::weald/context r-ctx})]))
 
 (s/fdef clean-fork
-        :args (s/cat :source ::state
-                     :child-context ::context)
-        :ret ::state)
+        :args (s/cat :source ::weald/state
+                     :child-context ::weald/context)
+        :ret ::weald/state)
 (defn clean-fork
   "Fork the context/lamport clock without the logs.
 
@@ -451,48 +401,48 @@ Main use-case is exception handlers in weird side-effecty places
 where it isn't convenient to propagate a log line or 2 that will
 show up later."
   [src child-context]
-  (let [parent-ctx (::context src)
+  (let [parent-ctx (::weald/context src)
         combiner (if (seq? parent-ctx)
                    conj
                    list)]
     (init (combiner parent-ctx child-context)
-          (inc (::lamport src)))))
+          (inc (::weald/lamport src)))))
 
 (s/fdef fork
-        :args (s/or :with-child-ctx (s/cat :source ::state
-                                           :child-context ::context)
-                    :without-child-ctx (s/cat :source ::state))
+        :args (s/or :with-child-ctx (s/cat :source ::weald/state
+                                           :child-context ::weald/context)
+                    :without-child-ctx (s/cat :source ::weald/state))
         ;; Note that the return value really depends
         ;; on the caller arity.
         ;; TODO: Need to write the :fn value to reflect this.
-        :ret (s/or :with-nested-context (s/tuple ::state ::state)
-                   :keep-parent-context ::state))
+        :ret (s/or :with-nested-context (s/tuple ::weald/state ::weald/state)
+                   :keep-parent-context ::weald/state))
 (defn fork
   "Return shape depends on arity"
   ([src child-context]
-   (let [parent-ctx (::context src)
+   (let [parent-ctx (::weald/context src)
          combiner (if (seq? parent-ctx)
                     conj
                     list)
          forked (init (combiner parent-ctx child-context)
-                      (::lamport src))]
+                      (::weald/lamport src))]
      (synchronize src forked)))
   ([src]
-   (init (::context src) (inc (::lamport src)))))
+   (init (::context src) (inc (::weald/lamport src)))))
 
 (s/fdef merge-state
-        :args (s/cat :logs1 ::state
-                     :logs2 ::state)
-        :ret ::state)
+        :args (s/cat :logs1 ::weald/state
+                     :logs2 ::weald/state)
+        :ret ::weald/state)
 (defn merge-state
   "Combine the entries of two log states
 
   This is mostly meant for logs that have diverged from the same context."
   [x y]
-  (let [combined-entries (merge-entries (::entries x) (::entries y))
+  (let [combined-entries (merge-entries (::weald/entries x) (::weald/entries y))
         result
         ;; There really isn't a good way to pick a winner if this conflicts
-        {::context (::context x)
-         ::entries combined-entries
-         ::lamport (max (::lamport x) (::lamport y))}]
+        {::weald/context (::weald/context x)
+         ::weald/entries combined-entries
+         ::weald/lamport (max (::weald/lamport x) (::weald/lamport y))}]
     (debug result ::top "Merged entries")))

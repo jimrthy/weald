@@ -2,10 +2,12 @@
   "Note that this is really for the sake of cljs"
   ;; I need to run clojurescript code inside here.
   ;; Q: How does this work out?
-  (:require [#? (:clj clojure.spec.alpha
+  (:require #?(:cljs [cljs.repl :as repl])
+            [#? (:clj clojure.spec.alpha
                  :cljs cljs.spec.alpha) :as s]
             [#?(:clj clojure.stacktrace
-                :cljs cljs.stacktrace) :as s-t]))
+                :cljs cljs.stacktrace) :as s-t]
+            [frereth-weald :as weald]))
 
 #?(:clj (s/fdef get-current-thread
           :ret string?))
@@ -13,37 +15,41 @@
           []
           (.getName (Thread/currentThread))))
 
-
+(s/fdef build-log-entry
+  :args (s/cat :label ::weald/label
+               :lamport ::weald/lamport
+               :level ::weald/level)
+  :ret ::weald/entry)
 #?(:clj (defn build-log-entry
           ([label lamport level]
-           {::current-thread (get-current-thread)
-            ::label label
-            ::lamport lamport
-            ::level level
-            ::time (System/currentTimeMillis)})
+           {::weald/current-thread (get-current-thread)
+            ::weald/label label
+            ::weald/lamport lamport
+            ::weald/level level
+            ::weald/time (System/currentTimeMillis)})
           ([label lamport level message]
            (assoc (build-log-entry label lamport level)
-                  ::message message))))
+                  ::weald/message message))))
 
 #?(:cljs (defn build-log-entry
            ([label lamport level]
-            {::label label
-             ::lamport lamport
-             ::level level
-             ::time (.now js/Date)})
+            {::weald/label label
+             ::weald/lamport lamport
+             ::weald/level level
+             ::weald/time (.now js/Date)})
            ([label lamport level message]
             (assoc (build-log-entry label lamport level)
-                   ::message message))))
+                   ::weald/message message))))
 
 (s/fdef add-log-entry
-        :args (s/cat :log-state :frereth-weald.logging/state
-                     :level :frereth-weald.logging/level
-                     :label :frereth-weald.logging/label
-                     :message :frereth-weald.logging/message
-                     :details :frereth-weald.logging/details)
-        :ret :frereth-weald.logging/entries)
+        :args (s/cat :log-state ::weald/state
+                     :level ::weald/level
+                     :label ::weald/label
+                     :message ::weald/message
+                     :details ::weald/details)
+        :ret ::weald/entries)
 #?(:clj (defn add-log-entry
-          ([{:keys [::lamport]
+          ([{:keys [::weald/lamport]
              :as log-state}
             level
             label]
@@ -53,11 +59,11 @@
                (s-t/print-stack-trace ex)))
            (-> log-state
                (update
-                ::entries
+                ::weald/entries
                 conj
                 (build-log-entry label lamport level))
-               (update ::lamport inc)))
-          ([{:keys [::lamport]
+               (update ::weald/lamport inc)))
+          ([{:keys [::weald/lamport]
              :as log-state}
             level
             label
@@ -68,12 +74,12 @@
                (s-t/print-stack-trace ex)))
            (-> log-state
                (update
-                ::entries
+                ::weald/entries
                 conj
                 (build-log-entry label lamport level message))
-               (update ::lamport inc)))
-          ([{:keys [::context
-                    ::lamport]
+               (update ::weald/lamport inc)))
+          ([{:keys [::weald/context
+                    ::weald/lamport]
              :as log-state}
             level
             label
@@ -81,15 +87,15 @@
             details]
            (-> log-state
                (add-log-entry level label message)
-               (update ::entries
+               (update ::weald/entries
                        (fn [cur]
                          (assoc-in cur
                                    [(dec (count cur))
-                                    ::details]
+                                    ::weald/details]
                                    details))))))
 
    :cljs (defn add-log-entry
-           ([{:keys [::lamport]
+           ([{:keys [::weald/lamport]
               :as log-state}
              level
              label]
@@ -99,27 +105,28 @@
                 (console.log (repl/print-mapped-stacktrace (.-stack ex)))))
             (-> log-state
                 (update
-                 ::entries
+                 ::weald/entries
                  conj
                  (build-log-entry label lamport level))
-                (update ::lamport inc)))
-           ([{:keys [::lamport]
+                (update ::weald/lamport inc)))
+           ([{:keys [::weald/lamport]
               :as log-state}
              level
              label
              message]
             (when-not lamport
-              (let [ex (ex-info "Desperation warning: missing clock among" (or {::problem log-state}
-                                                                               {::problem "falsey log-state"}))]
+              (let [ex (ex-info "Desperation warning: missing clock among" (if log-state
+                                                                             {::problem log-state}
+                                                                             {::problem "falsey log-state"}))]
                 (console.log (repl/print-mapped-stacktrace (.-stack ex)))))
             (-> log-state
                 (update
-                 ::entries
+                 ::weald/entries
                  conj
                  (build-log-entry label lamport level message))
-                (update ::lamport inc)))
-           ([{:keys [::context
-                     ::lamport]
+                (update ::weald/lamport inc)))
+           ([{:keys [::weald/context
+                     ::weald/lamport]
               :as log-state}
              level
              label
@@ -131,7 +138,7 @@
                         (fn [cur]
                           (assoc-in cur
                                     [(dec (count cur))
-                                     ::details]
+                                     ::weald/details]
                                     details)))))))
 
 (defmacro deflogger
