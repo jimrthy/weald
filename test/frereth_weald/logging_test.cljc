@@ -1,6 +1,9 @@
 (ns frereth-weald.logging-test
-  (:require [clojure.spec.test.alpha :as test]
-            [clojure.test :refer (deftest is testing)]
+  (:require #?(:clj [clojure.spec.test.alpha :as test]
+               :cljs [cljs.spec.test.alpha :as test])
+            [#?(:clj clojure.test
+                :cljs cljs.test) #?(:clj :refer
+                                    :cljs refer-macros) (deftest is testing)]
             [frereth-weald.logging :as log]))
 
 (defn set-up
