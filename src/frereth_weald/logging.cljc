@@ -1,20 +1,26 @@
 (ns frereth-weald.logging
   "Functional logging mechanism"
-  (:require [clojure.java.io :as io]
-            [clojure.spec.alpha :as s]
-            [clojure.stacktrace :as s-t]
-            [clojure.string :as str])
-  (:import #?(:clj clojure.lang.ExceptionInfo)
-           #?(:clj [java.io
-                     BufferedWriter
-                     FileWriter
-                     OutputStream
-                     OutputStreamWriter])))
+  (:require #?(:clj [clojure.java.io :as io])
+            #?(:clj [cljs.repl :as repl])
+            [#?(:clj clojure.spec.alpha
+                :cljs cljs.spec.alpha) :as s]
+            [#?(:clj clojure.stacktrace
+                :cljs cljs.stacktrace) :as s-t]
+            [clojure.string :as str]
+            #?(:clj [frereth-weald.logger-macro :refer [deflogger]]))
+  #?(:clj (:import clojure.lang.ExceptionInfo
+                  [java.io
+                   BufferedWriter
+                   FileWriter
+                   OutputStream
+                   OutputStreamWriter]))
+  #?(:cljs (:require-macros [frereth-weald.logger-macro :refer [deflogger]])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Specs
 
-(s/def ::atom #(instance? (class (atom nil))))
+(s/def ::atom #(instance? (#?(:clj class
+                              :cljs type) (atom nil)) %))
 (s/def ::ctx-atom (s/or :int int?
                         :keyword keyword?
                         :string string?
@@ -98,152 +104,42 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Internal
 
-(s/fdef get-current-thread
-  :ret string?)
-(defn get-current-thread
-  []
-  (.getName (Thread/currentThread)))
-
-(s/fdef build-log-entry
-        :args (s/or :with-msg (s/cat :label ::label
-                                     :lamport ::lamport
-                                     :level ::level
-                                     :message ::message)
-                    :sans-msg (s/cat :label ::label
-                                     :lamport ::lamport
-                                     :level ::level)))
-(defn build-log-entry
-  ([label lamport level]
-   {::current-thread (get-current-thread)
-    ::label label
-    ::lamport lamport
-    ::level level
-    ::time (System/currentTimeMillis)})
-  ([label lamport level message]
-   (assoc (build-log-entry label lamport level)
-          ::message message)))
-
-(s/fdef add-log-entry
-        :args (s/cat :log-state ::state
-                     :level ::level
-                     :label ::label
-                     :message ::message
-                     :details ::details)
-        :ret ::entries)
-(defn add-log-entry
-  ([{:keys [::lamport]
-     :as log-state}
-    level
-    label]
-   (when-not lamport
-     (let [ex (ex-info "Desperation warning: missing clock among"
-                       {::problem (or log-state "falsey log-state")})]
-       (s-t/print-stack-trace ex)))
-   (-> log-state
-       (update
-        ::entries
-        conj
-        (build-log-entry label lamport level))
-       (update ::lamport inc)))
-  ([{:keys [::lamport]
-     :as log-state}
-    level
-    label
-    message]
-   (when-not lamport
-     (let [ex (ex-info "Desperation warning: missing clock among" (or {::problem log-state}
-                                                                      {::problem "falsey log-state"}))]
-       (s-t/print-stack-trace ex)))
-   (-> log-state
-       (update
-        ::entries
-        conj
-        (build-log-entry label lamport level message))
-       (update ::lamport inc)))
-  ([{:keys [::context
-            ::lamport]
-     :as log-state}
-    level
-    label
-    message
-    details]
-   (-> log-state
-       (add-log-entry level label message)
-       (update ::entries
-               (fn [cur]
-                 (assoc-in cur
-                           [(dec (count cur))
-                            ::details]
-                           details))))))
-
-(defmacro deflogger
-  [level]
-  ;; TODO: I'd much rather do something like this for the sake of hygiene:
-  (comment
-    `(let [lvl-holder# '~level
-           tag-holder# (keyword (str *ns*) (name lvl-holder#))]
-       (defn '~lvl-holder#
-         ([entries#
-           label#
-           message#
-           details#]
-          (add-log-entry entries# ~'~tag-holder label# message# details#))
-         ([entries#
-           label#
-           message#]
-          (add-log-entry entries# ~'~tag-holder label# message#)))))
-  (let [tag (keyword (str *ns*) (name level))]
-    ;; The auto-gensymmed parameter names are obnoxious.
-    ;; And largely irrelevant.
-    ;; This isn't the kind of macro that you nest inside
-    ;; other macros.
-    ;; Then again...auto-namespacing makes eliminating them
-    ;; interesting.
-    `(defn ~level
-       ;; TODO: Refactor the parameter order.
-       ;; It doesn't seem like it should ever be worth it, but a
-       ;; complex function might save some code by setting up
-       ;; partial(s) using the label
-       ([log-state#
-         label#
-         message#
-         details#]
-        (add-log-entry log-state# ~tag label# message# details#))
-       ([log-state#
-         label#
-         message#]
-        (add-log-entry log-state# ~tag label# message#))
-       ([log-state#
-         label#]
-        (add-log-entry log-state# ~tag label#)))))
-
 (defn exception-details
   [ex]
-  (if (instance? Throwable ex)
+  (if (instance? #?(:clj Throwable :cljs js/Error) ex)
+    ;; Q: What should this look like in cljs?
     (try
-      (let [stack-trace (with-out-str (s-t/print-stack-trace ex))
+      (let [stack-trace #?(:clj (with-out-str (s-t/print-stack-trace ex))
+                           :cljs (repl/print-mapped-stacktrace (.-stack ex)))
             base {::stack stack-trace
                   ::exception ex}
             with-details (if (instance? ExceptionInfo ex)
-                           (assoc-in base [::data ::problem] (.getData ex))
+                           (assoc-in base [::data ::problem] (ex-data ex))
                            base)]
-        (if-let [cause (.getCause ex)]
+        (if-let [cause #?(:clj (.getCause ex)
+                          :cljs (ex-cause ex))]
           (assoc with-details ::cause (exception-details cause))
           with-details))
-      (catch ClassCastException ex1
-        {::exception ex
-         ::exception-class (class ex)
-         ::insult-to-injury {::exception ex1
-                             ::stack (s-t/print-stack-trace ex)}}))
+      #?(:clj (catch Throwable ex1
+                {::exception ex
+                 ::exception-class (class ex)
+                 ::insult-to-injury {::exception ex1
+                                     ::stack (s-t/print-stack-trace ex)}})
+         :cljs (catch :default ex1
+                 {::exception ex
+                  ::exception-class (type ex)
+                  ::insult-to-injury {::exception ex1
+                                      ::stack (repl/print-mapped-stacktrace (.-stack ex))}})))
     {::non-exception ex
-     ::non-exception-class (class ex)}))
+     ::non-exception-class (#?(:clj class
+                               :cljs type) ex)}))
 
 (declare init)
 (defn format-log-string
   [caller-stack-holder entry]
   (try
     (prn-str entry)
-    (catch RuntimeException ex
+    (catch #?(:clj RuntimeException :cljs js/Error) ex
       (let [injected
             (prn-str (add-log-entry (init ::logging-formatter -1)
                                     ::exception
@@ -351,7 +247,7 @@
             (swap! state-agent #(update % ::flush-count inc)))))
 
 #?(:cljs
-    (defrecord ConsoleLogger [agent-atom]
+    (defrecord ConsoleLogger [state-atom]
       Logger
       (log! [_ entry]
         (let [func
