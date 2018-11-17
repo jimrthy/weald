@@ -12,11 +12,11 @@
                           [org.clojure/spec.alpha "0.2.176"]
                           ;; FIXME: Move this to the testing task.
                           ;; Don't want to depend on it in general.
-                          [org.clojure/test.check "0.10.0-alpha2" :scope "test" :exclusions [org.clojure/clojure]]
+                          [org.clojure/test.check "0.10.0-alpha3" :scope "test" :exclusions [org.clojure/clojure]]
                           ;; TODO: Move this into the dev task
                           ;; (sadly, it isn't a straight copy/paste)
                           [samestep/boot-refresh "0.1.0" :scope "test" :exclusions [org.clojure/clojure]]
-                          [tolitius/boot-check "0.1.9" :scope "test" :exclusions [org.clojure/clojure]]])
+                          [tolitius/boot-check "0.1.11" :scope "test" :exclusions [org.clojure/clojure]]])
 
 (require '[adzerk.boot-cljs :refer [cljs]])
 
