@@ -60,7 +60,11 @@
     ;; Q: What should this look like in cljs?
     (try
       (let [stack-trace #?(:clj (with-out-str (s-t/print-stack-trace ex))
-                           :cljs (repl/print-mapped-stacktrace (.-stack ex)))
+                           ;; This isn't going to work out. Stacktrace
+                           ;; must be canonicalized.
+                           ;; The second param is "a map of library names to
+                           ;; decoded source maps."
+                           :cljs (s-t/mapped-stacktrace-str (.-stack ex) {}))
             base {::stack stack-trace
                   ::exception ex}
             with-details (if (instance? ExceptionInfo ex)
@@ -79,7 +83,7 @@
                  {::exception ex
                   ::exception-class (type ex)
                   ::insult-to-injury {::exception ex1
-                                      ::stack (repl/print-mapped-stacktrace (.-stack ex))}})))
+                                      ::stack (s-t/mapped-stacktrace-str (.-stack ex) {})}})))
     {::non-exception ex
      ::non-exception-class (#?(:clj class
                                :cljs type) ex)}))

@@ -102,7 +102,7 @@
             (when-not lamport
               (let [ex (ex-info "Desperation warning: missing clock among"
                                 {::problem (or log-state "falsey log-state")})]
-                (console.log (repl/print-mapped-stacktrace (.-stack ex)))))
+                (console.log (s-t/mapped-stacktrace-str (.-stack ex) {}))))
             (-> log-state
                 (update
                  ::weald/entries
@@ -118,7 +118,7 @@
               (let [ex (ex-info "Desperation warning: missing clock among" (if log-state
                                                                              {::problem log-state}
                                                                              {::problem "falsey log-state"}))]
-                (console.log (repl/print-mapped-stacktrace (.-stack ex)))))
+                (console.log (s-t/mapped-stacktrace-str (.-stack ex) {}))))
             (-> log-state
                 (update
                  ::weald/entries
