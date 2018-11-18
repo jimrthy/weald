@@ -1,6 +1,10 @@
 (ns frereth-weald.logging
   "Functional logging mechanism"
-  (:require #?(:clj [clojure.java.io :as io])
+  (:require #?(:clj [clojure.core.async
+                     :as async
+                     :refer [go]]
+               :cljs [cljs.core.async :as async])
+   #?(:clj [clojure.java.io :as io])
             #?(:cljs [cljs.repl :as repl])
             [#?(:clj clojure.spec.alpha
                 :cljs cljs.spec.alpha) :as s]
@@ -16,7 +20,9 @@
                    FileWriter
                    OutputStream
                    OutputStreamWriter]))
-  #?(:cljs (:require-macros [frereth-weald.logger-macro :refer [deflogger]])))
+  #?(:cljs (:require-macros
+            [cljs.core.async.macros :refer [go]]
+            [frereth-weald.logger-macro :refer [deflogger]])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Specs
@@ -105,6 +111,33 @@
         ;; Q: What's the best thing to do here?
         (comment (throw ex))
         injected))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Default implementations
+
+(defrecord AsyncLogger [channel state-atom]
+  Logger
+  (log! [_ entry]
+    (async/put! channel entry))
+  (flush! [_]
+    (swap! state-atom #(update % ::flush-count inc))))
+
+#?(:cljs
+    (defrecord ConsoleLogger [state-atom]
+      Logger
+      (log! [_ entry]
+        (let [func
+              (condp = (::weald/label entry)
+                ::weald/trace (partial console.debug "TRACE: ")
+                ::weald/debug console.debug
+                ::weald/info console.log
+                ::weald/warn console.warn
+                ::weald/error console.error
+                ::weald/exception (partial console.error "EXCEPTION: ")
+                ::weald/fatal (partial console.error "FATAL: "))]
+          (func entry)))
+      (flush! [_]
+        (swap! state-atom #(update % ::flush-count inc)))))
 
 #?(:clj
     (defrecord OutputWriterLogger [writer]
@@ -198,24 +231,7 @@
           ;; A: Not according to stackoverflow.
           ;; It flushes itself after every CR/LF
           (flush! [_]
-            (swap! state-agent #(update % ::flush-count inc)))))
-
-#?(:cljs
-    (defrecord ConsoleLogger [state-atom]
-      Logger
-      (log! [_ entry]
-        (let [func
-              (condp = (::weald/label entry)
-                ::weald/trace (partial console.debug "TRACE: ")
-                ::weald/debug console.debug
-                ::weald/info console.log
-                ::weald/warn console.warn
-                ::weald/error console.error
-                ::weald/exception (partial console.error "EXCEPTION: ")
-                ::weald/fatal (partial console.error "FATAL: "))]
-          (func entry)))
-      (flush! [_]
-        (swap! state-atom #(update % ::flush-count inc)))))
+            (send state-agent #(update % ::flush-count inc)))))
 
 (s/fdef merge-entries
         :args (s/cat :xs ::weald/entries
@@ -286,6 +302,14 @@
   ([context]
    (init context (get-official-clock))))
 
+(defn async-log-factory
+  [ch]
+  (->AsyncLogger ch (atom {::flush-count 0})))
+
+#?(:cljs (defn console-log-factory
+           []
+           (->ConsoleLogger (atom {::flush-count 0}))))
+
 #?(:clj (defn file-writer-factory
           [file-name]
           (io/make-parents file-name)
@@ -304,10 +328,6 @@
 #?(:clj (defn stream-log-factory
           [stream]
           (->StreamLogger stream)))
-
-#?(:cljs (defn console-log-factory
-           []
-           (->ConsoleLogger (atom {::flush-count 0}))))
 
 (s/fdef flush-logs!
         :args (s/cat :logger ::logger

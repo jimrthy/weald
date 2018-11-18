@@ -9,6 +9,8 @@
                           ;; A: spec
                           [org.clojure/clojure "1.9.0" :exclusions [org.clojure/spec.alpha] :scope "provided"]
                           [org.clojure/clojurescript "1.9.946" :scope "provided" :exclusions [org.clojure/clojure]]
+                          [org.clojure/core.async "0.4.474" :exclusions [org.clojure/clojure
+                                                                         org.clojure/tools.reader]]
                           [org.clojure/spec.alpha "0.2.176"]
                           ;; FIXME: Move this to the testing task.
                           ;; Don't want to depend on it in general.
