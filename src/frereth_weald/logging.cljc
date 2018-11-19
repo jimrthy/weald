@@ -139,6 +139,26 @@
       (flush! [_]
         (swap! state-atom #(update % ::flush-count inc)))))
 
+(defrecord CompositeWriter
+    [subordinates]
+  ;; Q: Would this be any more efficient to implement using
+  ;; something like a transducer?
+  ;; Note that it isn't intended for combining lots and lots
+  ;; of loggers. This is more for scenarios like the ones where
+  ;; a. Most logs go to a traditional logging system
+  ;; b. They all go somewhere cheap and painful for post-mortems
+  ;; c. High-priority logs send out emails
+  ;; d. Really nasty ones trigger pager notifications
+  ;; This doesn't replace serious monitoring/notification systems
+  ;; like PagerDuty, but it can be a valuable supplement.
+  Logger
+  (log! [_ entry]
+    (doseq [sub subordinates]
+      (.log! sub entry)))
+  (flush! [_]
+    (doseq [sub subordinates]
+      (.flush! sub))))
+
 #?(:clj
     (defrecord OutputWriterLogger [writer]
       Logger
@@ -305,6 +325,10 @@
 (defn async-log-factory
   [ch]
   (->AsyncLogger ch (atom {::flush-count 0})))
+
+(defn composite-log-factory
+  [logs-to-combine]
+  )
 
 #?(:cljs (defn console-log-factory
            []

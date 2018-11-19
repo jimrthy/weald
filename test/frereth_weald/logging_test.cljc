@@ -47,6 +47,7 @@
                           (recur (inc n) (conj entries entry))
                           [n entries]))))
         expected 10
+        ;; FIXME: No promises in clojurescript
         place-holder (promise)
         log-state (loop [n 0
                          log-state (log/init ::async-log)]
