@@ -7,10 +7,12 @@
                :cljs [cljs.spec.test.alpha :as test])
             [#?(:clj clojure.test
                 :cljs cljs.test) #?(:clj :refer
-                                    :cljs refer-macros) (deftest is testing)]
+                                    :cljs :refer-macros) [deftest is testing]]
             [frereth-weald :as weald]
             [frereth-weald.logging :as log])
-    #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]])))
+  #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]])))
+
+#?(:cljs (enable-console-print!))
 
 (defn set-up
   [ctx]
@@ -27,14 +29,18 @@
     (let [forked-entries (::weald/entries log-2)]
       (is (= (count forked-entries) 1)))))
 
-(deftest merge-entries
-  ;; This is a slow test, so it's probably worth spinning off into
-  ;; a folder that's really only meant for pre-commit testing.
-  (let [raw (test/check `log/merge-entries)
-        result (get-in (first raw) [:clojure.spec.test.check/ret :result])]
-    (is result)
-    (when (not result)
-      (throw (ex-info "" {::failure raw})))))
+(comment
+  (deftest merge-entries
+    ;; This is a slow test, so it's probably worth spinning off into
+    ;; a folder that's really only meant for pre-commit testing.
+    (let [raw (test/check `log/merge-entries)
+          result (get-in (first raw) [#?(:clj :clojure.spec.test.check/ret
+                                         :cljs :clojure.test.check/ret)
+                                      ;; Q: Would pass? be a better key to check?
+                                      :result])]
+      (is result)
+      (when (not result)
+        (throw (ex-info "" {::failure raw}))))))
 
 (deftest async-logger
   (let [ch (async/chan)

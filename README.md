@@ -10,6 +10,28 @@ the Weald of Kent
 
 A bunch of logs waiting to be cut
 
+## Running
+
+### CIDER interaction
+
+    boot cider-repl
+
+Then, from emacs, use
+
+    M-x cider-connect
+
+to localhost on port 32767.
+
+(I've had issues trying to use cider-jack-in over SSH).
+
+### Testing
+
+#### Clojurescript
+
+From a clojure REPL in the boot.user ns:
+
+    (boot (testing) (test-cljs))
+
 ## Motivation
 
 ### Logging is Painful

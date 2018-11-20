@@ -5,6 +5,7 @@
           :dependencies '[[adzerk/boot-cljs "2.1.5" :scope "test"]
                           [adzerk/boot-test "RELEASE" :scope "test"]
                           [binaryage/devtools "0.9.10" :scope "test" :exclusions [org.clojure/tools.reader]]
+                          [crisptrutski/boot-cljs-test "0.3.4" :scope "test"]
                           ;; Q: Which features of 1.9.0 does this really need?
                           ;; A: spec
                           [org.clojure/clojure "1.9.0" :exclusions [org.clojure/spec.alpha] :scope "provided"]
@@ -20,10 +21,16 @@
                           [samestep/boot-refresh "0.1.0" :scope "test" :exclusions [org.clojure/clojure]]
                           [tolitius/boot-check "0.1.11" :scope "test" :exclusions [org.clojure/clojure]]])
 
-(require '[adzerk.boot-cljs :refer [cljs]])
+(require '[adzerk.boot-cljs :refer [cljs]]
+         '[adzerk.boot-test :refer [test]]
+         '[boot.pod :as pod]
+         '[crisptrutski.boot-cljs-test :refer [test-cljs]]
+         '[samestep.boot-refresh :refer [refresh]]
+         '[tolitius.boot-check :as check])
 
 (task-options!
  aot {:namespace   #{'frereth-cp.server 'frereth-cp.client}}
+ jar {:file        (str "frereth-weald-" version "-standalone.jar")}
  pom {:project     project
       :version     version
       :description "Functional logging"
@@ -34,12 +41,7 @@
       ;; of the pieces?
       :license     {"Eclipse Public License"
                     "http://www.eclipse.org/legal/epl-v10.html"}}
- jar {:file        (str "frereth-weald-" version "-standalone.jar")})
-
-(require '[samestep.boot-refresh :refer [refresh]])
-(require '[tolitius.boot-check :as check])
-(require '[adzerk.boot-test :refer [test]])
-(require '[boot.pod :as pod])
+ test-cljs {:js-env :node})
 
 (deftask build
   "Build the project locally as a JAR."
