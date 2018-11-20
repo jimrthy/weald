@@ -47,14 +47,21 @@
                           (recur (inc n) (conj entries entry))
                           [n entries]))))
         expected 10
-        ;; FIXME: No promises in clojurescript
-        place-holder (promise)
+        place-holder (atom {::fulfilled false})
         log-state (loop [n 0
                          log-state (log/init ::async-log)]
                     (if (< n expected)
                       (recur (inc n)
                              (log/info log-state ::whatever "" n))
                       log-state))]
+    (add-watch place-holder ::test-done
+               (fn [_k _atom old-state
+                    {:keys [::fulfilled ::result]
+                     :as new-state}]
+                 (println "Test updated: " result)
+                 (is fulfilled)
+                 (is result)
+                 (remove-watch _atom _k)))
     (log/flush-logs! logger log-state)
     (async/close! ch)
     (let [checker (go (let [[response port] (async/alts! [handler (async/timeout 250)])]
@@ -64,11 +71,14 @@
                             (is (= (inc expected) actual))
                             (is (= (inc expected) (count entries)))
                             (is (= (range expected) (take expected (map :frereth-weald/details entries))))
-                            (when (and (= actual (inc expected))
-                                       (= (count entries) (inc expected))
-                                       (= (take expected (map :frereth-weald/details entries)) (range expected)))
-                              (deliver place-holder true)))
-                          (is (= port handler)))))
-          result (deref place-holder 500 ::timeout)]
-      (is result)
-      (is (not= result ::timeout)))))
+                            (if (and (= actual (inc expected))
+                                     (= (count entries) (inc expected))
+                                     (= (take expected (map :frereth-weald/details entries)) (range expected)))
+                              (reset! place-holder {::fulfilled true
+                                                    ::result true})
+                              (reset! place-holder {::fulfilled true
+                                                    ::result false})))
+                          (is (= port handler)))))]
+      ;; Q: How can we wait on an async result in cljs?
+      ;; A: We can't. At least not on the browser.
+      (is checker))))
