@@ -1,5 +1,5 @@
 (def project 'com.frereth.weald)
-(def version "0.0.1")
+(def version "0.0.2-SNAPSHOT")
 
 (set-env! :resource-paths #{"src"}
           :dependencies '[[adzerk/boot-cljs "2.1.5" :scope "test"]
