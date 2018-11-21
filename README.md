@@ -288,7 +288,9 @@ message string.
 
 Writing a Logger for a "real" logging library won't quite be trivial.
 But the fact that each log entry is structured and includes the log
-level should make it both easy and simple.
+level should make it worthwhile.
+
+TODO item: add samples.
 
 I obviously think that it's promising enough that I'm planning to
 make it public.
@@ -314,9 +316,11 @@ One way for this happens is to start a (try) block
 without flushing, flush just before throwing an exception, and
 then flush the state from the outer logs in a (finally) clause.
 
-Other ways are usually variations of the same theme. Setting up a
-callback as a partial with some accumulated log state or entering a
-loop with one that hasn't been freshly flushed.
+Other ways are usually variations of the same theme. I've run into
+this both
+
+* setting up a callback as a partial with some accumulated log state
+* entering a loop with one that hasn't been freshly flushed.
 
 #### Odd Structure
 
