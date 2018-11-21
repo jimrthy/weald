@@ -1,6 +1,6 @@
 {:compiler-options {:asset-path "js/browser-logger.out"
                     :external-config {:devtools/config {:features-to-install [:formatters :hints]}}
-                    :main "frereth-weald.logging"
+                    :main "frereth.weald.logging"
                     :optimizations :none
                     :parallel-build true
                     :preloads [devtools.preload]}}

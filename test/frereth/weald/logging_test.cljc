@@ -1,4 +1,4 @@
-(ns frereth-weald.logging-test
+(ns frereth.weald.logging-test
   (:require #?(:clj [clojure.core.async
                      :as async
                      :refer [go]]
@@ -8,8 +8,8 @@
             [#?(:clj clojure.test
                 :cljs cljs.test) #?(:clj :refer
                                     :cljs :refer-macros) [deftest is testing]]
-            [frereth-weald :as weald]
-            [frereth-weald.logging :as log])
+            [frereth.weald :as weald]
+            [frereth.weald.logging :as log])
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]])))
 
 #?(:cljs (enable-console-print!))

@@ -1,4 +1,4 @@
-(ns frereth-weald.logging
+(ns frereth.weald.logging
   "Functional logging mechanism"
   (:require #?(:clj [clojure.core.async
                      :as async
@@ -11,9 +11,9 @@
             [#?(:clj clojure.stacktrace
                 :cljs cljs.stacktrace) :as s-t]
             [clojure.string :as str]
-            [frereth-weald.logger-macro :refer [#?(:clj deflogger)
+            [frereth.weald.logger-macro :refer [#?(:clj deflogger)
                                                 add-log-entry]]
-            [frereth-weald :as weald])
+            [frereth.weald :as weald])
   #?(:clj (:import clojure.lang.ExceptionInfo
                   [java.io
                    BufferedWriter
@@ -22,7 +22,7 @@
                    OutputStreamWriter]))
   #?(:cljs (:require-macros
             [cljs.core.async.macros :refer [go]]
-            [frereth-weald.logger-macro :refer [deflogger]])))
+            [frereth.weald.logger-macro :refer [deflogger]])))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Specs

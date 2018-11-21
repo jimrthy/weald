@@ -1,4 +1,4 @@
-(ns frereth-weald.logger-macro
+(ns frereth.weald.logger-macro
   "Note that this is really for the sake of cljs"
   ;; I need to run clojurescript code inside here.
   ;; Q: How does this work out?
@@ -7,7 +7,7 @@
                  :cljs cljs.spec.alpha) :as s]
             [#?(:clj clojure.stacktrace
                 :cljs cljs.stacktrace) :as s-t]
-            [frereth-weald :as weald]))
+            [frereth.weald :as weald]))
 
 #?(:clj (s/fdef get-current-thread
           :ret string?))

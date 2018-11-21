@@ -14,4 +14,4 @@
             [clojure.test.check.generators :as lo-gen]
             ;; This is moderately useless under boot.
             [clojure.tools.namespace.repl :refer (refresh refresh-all)]
-            [frereth-weald.logging :as log]))
+            [frereth.weald.logging :as log]))
