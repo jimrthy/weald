@@ -34,11 +34,8 @@
  pom {:project     project
       :version     version
       :description "Functional logging"
-      ;; TODO: Add a real website
       :url         "https://github.com/jimrthy/weald"
       :scm         {:url "https://github.com/jimrthy/weald"}
-      ;; Q: Should this go into public domain like the rest
-      ;; of the pieces?
       :license     {"Eclipse Public License"
                     "http://www.eclipse.org/legal/epl-v10.html"}}
  test-cljs {:js-env :node})
@@ -46,12 +43,8 @@
 (deftask build
   "Build the project locally as a JAR."
   [d dir PATH #{str} "the set of directories to write to (target)."]
-  ;; Note that this approach passes the raw command-line parameters
-  ;; to -main, as opposed to what happens with `boot run`
-  ;; TODO: Eliminate this discrepancy
   (let [dir (if (seq dir) dir #{"target"})]
     (comp (aot)
-          ;; FIXME: These should probably be the release versions instead
           (cljs :ids #{"js/node-dev"})
           (cljs :ids #{"js/browser-dev"})
           (pom)
@@ -100,12 +93,3 @@
   ;; Q: Should they move to there also?
   (let [port (or port 32767)]
     (comp (dev) (testing) (check-conflicts) (cider) (javac) (repl :port port :bind "0.0.0.0"))))
-
-(deftask run
-  "Run the project."
-  [f file FILENAME #{str} "Application arguments passed to main."]
-  ;; This is a leftover template from another project that I
-  ;; really just copy/pasted over.
-  ;; Q: Does it make any sense to keep it around?
-  (require '[frereth-cp.server :as app])
-  (apply (resolve 'app/-main) file))
