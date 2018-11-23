@@ -1,5 +1,5 @@
 (def project 'frereth.weald)
-(def version "0.0.2-SNAPSHOT")
+(def version "0.0.2")
 
 (set-env! :resource-paths #{"src"}
           :dependencies '[[adzerk/bootlaces "0.1.13" :scope "test"]
