@@ -1,8 +1,9 @@
-(def project 'com.frereth.weald)
+(def project 'frereth.weald)
 (def version "0.0.2-SNAPSHOT")
 
 (set-env! :resource-paths #{"src"}
-          :dependencies '[[adzerk/boot-cljs "2.1.5" :scope "test"]
+          :dependencies '[[adzerk/bootlaces "0.1.13" :scope "test"]
+                          [adzerk/boot-cljs "2.1.5" :scope "test"]
                           [adzerk/boot-test "RELEASE" :scope "test"]
                           [binaryage/devtools "0.9.10" :scope "test" :exclusions [org.clojure/tools.reader]]
                           [crisptrutski/boot-cljs-test "0.3.4" :scope "test"]
@@ -21,12 +22,14 @@
                           [samestep/boot-refresh "0.1.0" :scope "test" :exclusions [org.clojure/clojure]]
                           [tolitius/boot-check "0.1.11" :scope "test" :exclusions [org.clojure/clojure]]])
 
-(require '[adzerk.boot-cljs :refer [cljs]]
+(require '[adzerk.bootlaces :refer [bootlaces! build-jar push-snapshot push-release]]
+         '[adzerk.boot-cljs :refer [cljs]]
          '[adzerk.boot-test :refer [test]]
          '[boot.pod :as pod]
          '[crisptrutski.boot-cljs-test :refer [test-cljs]]
          '[samestep.boot-refresh :refer [refresh]]
          '[tolitius.boot-check :as check])
+(bootlaces! version)
 
 (task-options!
  aot {:namespace   #{'frereth-cp.server 'frereth-cp.client}}
