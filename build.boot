@@ -1,4 +1,4 @@
-(def project 'frereth.weald)
+(def project 'frereth/weald)
 (def version "0.0.3-SNAPSHOT")
 
 (set-env! :resource-paths #{"src"}
