@@ -25,25 +25,6 @@
             [frereth.weald.logger-macro :refer [deflogger]]))
   (:import frereth.weald.Logger))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;; Specs
-
-;; Q: Worth moving this to top-level weald?
-;; It doesn't matter for this, but I have several places that
-;; use this, and the duplication is annoying.
-(s/def ::atom #(instance? (#?(:clj class
-                              :cljs type) (atom nil)) %))
-
-;; It's tempting to pass around this instead of a ::weald/logger
-;; instance directly.
-;; To create Logger instances on demand and then discard them.
-;; The temptation seems dumb.
-;; Q: So why am I still tempted?
-(s/def ::log-builder (s/fspec :args nil
-                              :ret ::weald/logger))
-
-(s/def ::state-atom (s/and ::atom
-                           #(s/valid? ::weald/state (deref %))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Internal

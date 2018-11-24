@@ -3,6 +3,10 @@
   (:require [#?(:clj clojure.spec.alpha
                 :cljs cljs.spec.alpha) :as s]))
 
+;;; Note that this is pretty generally useful
+(s/def ::atom #(instance? (#?(:clj class
+                              :cljs type) (atom nil)) %))
+
 (s/def ::ctx-atom (s/or :int int?
                         :keyword keyword?
                         :string string?
@@ -56,6 +60,8 @@
                              ::entries
                              ::lamport]))
 
+(s/def ::state-atom (s/and ::atom
+                           #(s/valid? ::state (deref %))))
 ;;;; Implement this for your side-effects
 (defprotocol Logger
   "Extend this for logging side-effects"
@@ -71,3 +77,11 @@
   ;; detectiong to handle those changes automatically.
   (flush! [this] "Some loggers need to do this at the end of a batch"))
 (s/def ::logger #(satisfies? Logger %))
+
+;; It's tempting to pass around this instead of a ::weald/logger
+;; instance directly.
+;; To create Logger instances on demand and then discard them.
+;; The temptation seems dumb.
+;; Q: So why am I still tempted?
+(s/def ::log-builder (s/fspec :args nil
+                              :ret ::logger))

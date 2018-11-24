@@ -10,6 +10,8 @@ the Weald of Kent
 
 A bunch of logs waiting to be cut
 
+[![Clojars Project](https://img.shields.io/clojars/v/frereth/weald.svg)](https://clojars.org/frereth/weald)
+
 ## Running
 
 ### CIDER interaction
