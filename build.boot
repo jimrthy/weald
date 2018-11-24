@@ -39,7 +39,7 @@
 
 (task-options!
  aot {:namespace   #{'frereth-cp.server 'frereth-cp.client}}
- jar {:file        (str "frereth-weald-" version "-standalone.jar")}
+ jar {:file        (str "frereth-weald-" version ".jar")}
  pom {:project     project
       :version     version
       :description "Functional logging"
