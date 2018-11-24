@@ -10,6 +10,12 @@
                           ;; Q: Which features of 1.9.0 does this really need?
                           ;; A: spec
                           [org.clojure/clojure "1.9.0" :exclusions [org.clojure/spec.alpha] :scope "provided"]
+                          ;; This supplies org.clojure/tools.reader.
+                          ;; But in a "provided" scope.
+                          ;; As-is, anything that uses this library will have to supply that.
+                          ;; Which is probably fine, if they're using clojurescript.
+                          ;; But annoying for clojure projects which really shouldn't need it.
+                          ;; Q: Which approach is worse?
                           [org.clojure/clojurescript "1.9.946" :scope "provided" :exclusions [org.clojure/clojure]]
                           [org.clojure/core.async "0.4.474" :exclusions [org.clojure/clojure
                                                                          org.clojure/tools.reader]]

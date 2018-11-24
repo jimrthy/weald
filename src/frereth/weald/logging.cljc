@@ -5,15 +5,15 @@
                      :refer [go]]
                :cljs [cljs.core.async :as async])
    #?(:clj [clojure.java.io :as io])
-            #?(:cljs [cljs.repl :as repl])
-            [#?(:clj clojure.spec.alpha
-                :cljs cljs.spec.alpha) :as s]
-            [#?(:clj clojure.stacktrace
-                :cljs cljs.stacktrace) :as s-t]
-            [clojure.string :as str]
-            [frereth.weald.logger-macro :refer [#?(:clj deflogger)
-                                                add-log-entry]]
-            [frereth.weald :as weald])
+   #?(:cljs [cljs.repl :as repl])
+   [#?(:clj clojure.spec.alpha
+       :cljs cljs.spec.alpha) :as s]
+   [#?(:clj clojure.stacktrace
+       :cljs cljs.stacktrace) :as s-t]
+   [clojure.string :as str]
+   [frereth.weald.logger-macro :refer [#?(:clj deflogger)
+                                       add-log-entry]]
+   [frereth.weald :as weald])
   #?(:clj (:import clojure.lang.ExceptionInfo
                   [java.io
                    BufferedWriter
@@ -22,37 +22,25 @@
                    OutputStreamWriter]))
   #?(:cljs (:require-macros
             [cljs.core.async.macros :refer [go]]
-            [frereth.weald.logger-macro :refer [deflogger]])))
+            [frereth.weald.logger-macro :refer [deflogger]]))
+  (:import frereth.weald.Logger))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Specs
 
+;; Q: Worth moving this to top-level weald?
+;; It doesn't matter for this, but I have several places that
+;; use this, and the duplication is annoying.
 (s/def ::atom #(instance? (#?(:clj class
                               :cljs type) (atom nil)) %))
 
-;;;; Implement this for your side-effects
-(defprotocol Logger
-  "Extend this for logging side-effects"
-  (log! [this msg]
-    "At least queue up a log message to side-effect")
-  ;; It's tempting to add things like filtering to do things like
-  ;; discarding all logs except warn and error.
-  ;; Don't give in to temptation: keep the concerns separated.
-  ;; Honestly, that's something that should probably be stateful
-  ;; in a serious system, so operators can modify logging levels
-  ;; on the fly based on whether or not something's going wrong.
-  ;; For that matter, it would be nice to use something like anomaly
-  ;; detectiong to handle those changes automatically.
-  (flush! [this] "Some loggers need to do this at the end of a batch"))
-(s/def ::logger #(satisfies? Logger %))
-
-;; It's tempting to pass around this instead of a ::logger
+;; It's tempting to pass around this instead of a ::weald/logger
 ;; instance directly.
 ;; To create Logger instances on demand and then discard them.
 ;; The temptation seems dumb.
 ;; Q: So why am I still tempted?
 (s/def ::log-builder (s/fspec :args nil
-                              :ret ::logger))
+                              :ret ::weald/logger))
 
 (s/def ::state-atom (s/and ::atom
                            #(s/valid? ::weald/state (deref %))))
@@ -354,7 +342,7 @@
           (->StreamLogger stream)))
 
 (s/fdef flush-logs!
-        :args (s/cat :logger ::logger
+        :args (s/cat :logger ::weald/logger
                      :logs ::weald/state)
         :ret ::weald/state)
 ;; Do what I can to keep local clocks synchronized
@@ -397,8 +385,8 @@
                                          "flushing"
                                          {::weald/context context})]
       (doseq [message (::weald/entries log-state)]
-        (log! logger message))
-      (flush! logger)
+        (.log! logger message))
+      (.flush! logger)
 
       (assoc (do-sync-clock log-state)
              ::weald/entries []))))
