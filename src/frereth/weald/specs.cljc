@@ -1,4 +1,4 @@
-(ns frereth.weald
+(ns frereth.weald.specs
   "This is really for the sake of shared specs"
   (:require [#?(:clj clojure.spec.alpha
                 :cljs cljs.spec.alpha) :as s]))

@@ -7,7 +7,7 @@
                  :cljs cljs.spec.alpha) :as s]
             [#?(:clj clojure.stacktrace
                 :cljs cljs.stacktrace) :as s-t]
-            [frereth.weald :as weald]))
+            [frereth.weald.specs :as weald]))
 
 #?(:clj (s/fdef get-current-thread
           :ret string?))

@@ -13,7 +13,7 @@
    [clojure.string :as str]
    [frereth.weald.logger-macro :refer [#?(:clj deflogger)
                                        add-log-entry]]
-   [frereth.weald :as weald])
+   [frereth.weald.specs :as weald])
   #?(:clj (:import clojure.lang.ExceptionInfo
                   [java.io
                    BufferedWriter
@@ -23,7 +23,7 @@
   #?(:cljs (:require-macros
             [cljs.core.async.macros :refer [go]]
             [frereth.weald.logger-macro :refer [deflogger]]))
-  (:import frereth.weald.Logger))
+  (:import frereth.weald.specs.Logger))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -8,7 +8,7 @@
             [#?(:clj clojure.test
                 :cljs cljs.test) #?(:clj :refer
                                     :cljs :refer-macros) [deftest is testing]]
-            [frereth.weald :as weald]
+            [frereth.weald.specs :as weald]
             [frereth.weald.logging :as log])
   #?(:cljs (:require-macros [cljs.core.async.macros :refer [go]])))
 
