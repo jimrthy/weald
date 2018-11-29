@@ -295,9 +295,12 @@
   [ch]
   (->AsyncLogger ch (atom {::flush-count 0})))
 
+(s/fdef composite-log-factory
+  :args (s/cat :loggers-to-combine (s/coll-of ::weald/logger))
+  :ret ::weald/logger)
 (defn composite-log-factory
-  [logs-to-combine]
-  )
+  [loggers-to-combine]
+  (->CompositeWriter loggers-to-combine))
 
 #?(:cljs (defn console-log-factory
            []
