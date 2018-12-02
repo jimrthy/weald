@@ -101,10 +101,9 @@ so I've run with it.
 
 ## Usage
 
-Until I get around to deploying this to clojars, start by cloning
-this repository and adding it to your local Maven repository:
+Maven coordinates:
 
-    boot build install
+    [com.frereth/weald "version"]
 
 Run
 
@@ -127,11 +126,13 @@ Create a Logger instance that writes to STDOUT:
 
     (def logger (log/std-out-log-factory))
 
-Other options are:
+Other built-in Logger options are:
 
-* (file-writer-factory file-name): opens file-name and writes to it
-* (std-err-log-factory): writes to STDERR
-* (stream-log-factory stream): writes to stream
+* `(async-log-factory async-chan)`: writes entries to async-chat
+* `(file-writer-factory file-name)`: opens file-name and writes to it
+* `(std-err-log-factory)`: writes to STDERR
+* `(stream-log-factory stream)`: writes to stream
+* `(composite-log-factory logger-seq)`: writes to multiple loggers
 
 Clear the accumulated log entries and flush them to STDOUT:
 
