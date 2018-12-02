@@ -1,5 +1,45 @@
-(def project 'frereth/weald)
-(def version "0.0.3-SNAPSHOT")
+ (def project-name "com.frereth/weald")
+
+(require '[clojure.java.shell :as sh])
+
+(defn next-version [version]
+  (when version
+    (let [[a b] (next (re-matches #"(.*?)([\d]+)" version))]
+      (when (and a b)
+        (str a (inc (Long/parseLong b)))))))
+
+(def default-version
+  "Really just for running inside docker w/out git tags"
+  "0.0.3-???-dirty")
+(defn deduce-version-from-git
+  "Avoid another decade of pointless, unnecessary and error-prone
+  fiddling with version labels in source code.
+
+  Important note: this only works if your repo has tags!
+  And the tags this cares about need to be numeric. Can't
+  use, e.g. 0.0.1-SNAPSHOT.
+
+  Another interesting detail is that tags must have commit
+  messages for describe to work properly:
+  `git tag 0.0.2 -m 'Move forward'`"
+  []
+  (let [[version commits hash dirty?]
+        (next (re-matches #"(.*?)-(.*?)-(.*?)(-dirty)?\n"
+                          (:out (sh/sh "git"
+                                       "describe"
+                                       "--always"
+                                       "--dirty"
+                                       "--long"
+                                       "--tags"
+                                       "--match" "[0-9].*"))))]
+    (if commits
+      (cond
+        dirty? (str (next-version version) "-" hash "-dirty")
+        (pos? (Long/parseLong commits)) (str (next-version version) "-" hash)
+        :otherwise version)
+      default-version)))
+(def project 'com.frereth/weald)
+(def version #_"0.0.3-SNAPSHOT" (deduce-version-from-git))
 
 (set-env! :resource-paths #{"src"}
           :dependencies '[[adzerk/bootlaces "0.1.13" :scope "test"]
