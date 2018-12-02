@@ -39,7 +39,7 @@
         :otherwise version)
       default-version)))
 (def project 'com.frereth/weald)
-(def version #_"0.0.3-SNAPSHOT" (deduce-version-from-git))
+(def version #_"0.0.4-SNAPSHOT" (deduce-version-from-git))
 
 (set-env! :resource-paths #{"src"}
           :dependencies '[[adzerk/bootlaces "0.1.13" :scope "test"]

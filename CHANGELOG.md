@@ -1,3 +1,5 @@
+# 0.0.4 (pending)
+
 # 0.0.3
 
 Clean things up to make it usable/useful by a project that pulls it from
