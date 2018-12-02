@@ -1,9 +1,9 @@
-# v0.0.3 (pending)
+# 0.0.3
 
 Clean things up to make it usable/useful by a project that pulls it from
 clojars rather than just using the local maven repo.
 
-# v0.0.2
+# 0.0.2
 
 Set it up to be able to push to clojars
 
