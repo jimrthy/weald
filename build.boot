@@ -1,4 +1,4 @@
- (def project-name "com.frereth/weald")
+(def project-name "com.frereth/weald")
 
 (require '[clojure.java.shell :as sh])
 
@@ -10,7 +10,7 @@
 
 (def default-version
   "Really just for running inside docker w/out git tags"
-  "0.0.3-???-dirty")
+  "0.0.4-???-dirty")
 (defn deduce-version-from-git
   "Avoid another decade of pointless, unnecessary and error-prone
   fiddling with version labels in source code.
