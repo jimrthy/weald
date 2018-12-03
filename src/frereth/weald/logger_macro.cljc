@@ -146,7 +146,7 @@
      ;; TODO: I'd much rather do something like this for the sake of hygiene:
      (comment
        `(let [lvl-holder# '~level
-              tag-holder# (keyword (str *ns*) (name lvl-holder#))]
+              tag-holder# (keyword "frereth.weald.specs" (name lvl-holder#))]
           (defn '~lvl-holder#
             ([entries#
               label#
@@ -157,7 +157,7 @@
               label#
               message#]
              (add-log-entry entries# ~'~tag-holder label# message#)))))
-     (let [tag (keyword (str *ns*) (name level))]
+     (let [tag (keyword "frereth.weald.specs" (name level))]
        ;; The auto-gensymmed parameter names are obnoxious.
        ;; And largely irrelevant.
        ;; This isn't the kind of macro that you nest inside
