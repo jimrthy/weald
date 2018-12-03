@@ -142,3 +142,9 @@
   ;; Q: Should they move to there also?
   (let [port (or port 32767)]
     (comp (dev) (testing) (check-conflicts) (cider) (javac) (repl :port port :bind "0.0.0.0"))))
+
+(deftask publish-from-branch
+  "Publish to clojars from your current branch"
+  []
+  (task-options! push {:ensure-branch nil})
+  (comp (build-jar) (push-snapshot)))
