@@ -23,8 +23,8 @@
   messages for describe to work properly:
   `git tag 0.0.2 -m 'Move forward'`"
   []
-  (let [[version commits hash dirty?]
-        (next (re-matches #"(.*?)-(.*?)-(.*?)(-dirty)?\n"
+  (let [[version previous-hash commits hash dirty?]
+        (next (re-matches #"(\d+\.\d+\.\d+)(-\w*)?-(\d*)-(.*?)(-dirty)?\n"
                           (:out (sh/sh "git"
                                        "describe"
                                        "--always"
@@ -75,7 +75,6 @@
          '[crisptrutski.boot-cljs-test :refer [test-cljs]]
          '[samestep.boot-refresh :refer [refresh]]
          '[tolitius.boot-check :as check])
-(bootlaces! version)
 
 (task-options!
  aot {:namespace   #{'frereth-cp.server 'frereth-cp.client}}
@@ -89,11 +88,21 @@
                     "http://www.eclipse.org/legal/epl-v10.html"}}
  test-cljs {:js-env :node})
 
+(deftask set-version
+  []
+  (let [version (deduce-version-from-git)]
+    (task-options!
+     jar {:file (str "frereth-cp-" version ".jar")}
+     pom {:version version})
+    (bootlaces! version :dont-modify-paths? true))
+  identity)
+
 (deftask build
   "Build the project locally as a JAR."
   [d dir PATH #{str} "the set of directories to write to (target)."]
   (let [dir (if (seq dir) dir #{"target"})]
-    (comp (aot)
+    (comp (set-version)
+          (aot)
           (cljs :ids #{"js/node-dev"})
           (cljs :ids #{"js/browser-dev"})
           (pom)
@@ -143,8 +152,8 @@
   (let [port (or port 32767)]
     (comp (dev) (testing) (check-conflicts) (cider) (javac) (repl :port port :bind "0.0.0.0"))))
 
-(deftask publish-from-branch
+(deftask to-clojars
   "Publish to clojars from your current branch"
   []
   (task-options! push {:ensure-branch nil})
-  (comp (build-jar) (push-release)))
+  (comp (set-version) (build-jar) (push-release)))

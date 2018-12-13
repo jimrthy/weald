@@ -291,6 +291,8 @@
   ([context]
    (init context (get-official-clock))))
 
+;;; Q: Would it make sense to convert these various factory calls to a
+;;; single multi-method?
 (defn async-log-factory
   [ch]
   (->AsyncLogger ch (atom {::flush-count 0})))
