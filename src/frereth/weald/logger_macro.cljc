@@ -29,9 +29,8 @@
             ::weald/time (System/currentTimeMillis)})
           ([label lamport level message]
            (assoc (build-log-entry label lamport level)
-                  ::weald/message message))))
-
-#?(:cljs (defn build-log-entry
+                  ::weald/message message)))
+   :cljs (defn build-log-entry
            ([label lamport level]
             {::weald/label label
              ::weald/lamport lamport

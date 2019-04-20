@@ -300,6 +300,21 @@ make it public.
 
 ### Downsides
 
+#### Non-serializable objects
+
+As soon as we start doing anything interesting with these log entries
+(like sending them across the wire to a web browser), we need to
+serialize them.
+
+That doesn't work very well when you can put arbitrary data in the
+:details field.
+
+I definitely don't want to limit those fields to primitive values that
+can be directly converted to json: it's useful in other instances to
+have real objects available for inspection and interaction.
+
+I need to put more thought into this.
+
 #### Exceptions
 
 If you throw one, you're very likely to get weird logging artifacts.

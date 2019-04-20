@@ -4,9 +4,10 @@
                 :cljs cljs.spec.alpha) :as s]))
 
 ;;; Note that this is pretty generally useful
-(s/def ::atom #(instance? (#?(:clj class
-                              :cljs type) (atom nil)) %))
+(s/def ::atom #(instance? (type (atom nil)) %))
 
+;; This is based on the idea of an atom from common lisp rather than the
+;; clojure state management construct
 (s/def ::ctx-atom (s/or :int int?
                         :keyword keyword?
                         :string string?

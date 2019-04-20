@@ -91,23 +91,6 @@
   (flush! [_]
     (swap! state-atom #(update % ::flush-count inc))))
 
-#?(:cljs
-    (defrecord ConsoleLogger [state-atom]
-      Logger
-      (log! [_ entry]
-        (let [func
-              (condp = (::weald/label entry)
-                ::weald/trace (partial console.debug "TRACE: ")
-                ::weald/debug console.debug
-                ::weald/info console.log
-                ::weald/warn console.warn
-                ::weald/error console.error
-                ::weald/exception (partial console.error "EXCEPTION: ")
-                ::weald/fatal (partial console.error "FATAL: "))]
-          (func entry)))
-      (flush! [_]
-        (swap! state-atom #(update % ::flush-count inc)))))
-
 (defrecord CompositeWriter
     [subordinates]
   ;; Q: Would this be any more efficient to implement using
@@ -127,6 +110,23 @@
   (flush! [_]
     (doseq [sub subordinates]
       (.flush! sub))))
+
+#?(:cljs
+    (defrecord ConsoleLogger [state-atom]
+      Logger
+      (log! [_ entry]
+        (let [func
+              (condp = (::weald/label entry)
+                ::weald/trace (partial console.debug "TRACE: ")
+                ::weald/debug console.debug
+                ::weald/info console.log
+                ::weald/warn console.warn
+                ::weald/error console.error
+                ::weald/exception (partial console.error "EXCEPTION: ")
+                ::weald/fatal (partial console.error "FATAL: "))]
+          (func entry)))
+      (flush! [_]
+        (swap! state-atom #(update % ::flush-count inc)))))
 
 #?(:clj
     (defrecord OutputWriterLogger [writer]
@@ -162,35 +162,6 @@
                     :as this}]
             (.flush stream))))
 
-#? (:clj (defrecord StdOutLogger [state-agent]
-           ;; Really just a StreamLogger
-           ;; where stream is STDOUT.
-           ;; But it's simple/easy enough that it seemed
-           ;; worth writing this way instead
-           Logger
-           (log! [{:keys [:state-agent]
-                   :as this} msg]
-             (when-let [ex (agent-error state-agent)]
-               (println "Logging Agent Failed:\n"
-                        (exception-details ex))
-               (let [last-state @state-agent]
-                 (println "Logging Agent State:\n"
-                          last-state)
-                 (restart-agent state-agent last-state)))
-             ;; Creating an exception that we're going to throw away
-             ;; for almost every log message seems really wasteful.
-             (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")]
-               (send state-agent (fn [state entry]
-                                   (print (format-log-string get-caller-stack entry))
-                                   state)
-                     msg)))
-           ;; Q: Is there any point to calling .flush
-           ;; on STDOUT?
-           ;; A: Not according to stackoverflow.
-           ;; It flushes itself after every CR/LF
-           (flush! [_]
-             (send state-agent #(update % ::flush-count inc)))))
-
 #?(:clj (defrecord StdErrLogger [state-agent]
           ;; Really just a StreamLogger
           ;; where stream is STDOUT.
@@ -222,6 +193,35 @@
           (flush! [_]
             (send state-agent #(update % ::flush-count inc)))))
 
+#?(:clj (defrecord StdOutLogger [state-agent]
+          ;; Really just a StreamLogger
+          ;; where stream is STDOUT.
+          ;; But it's simple/easy enough that it seemed
+          ;; worth writing this way instead
+          Logger
+          (log! [{:keys [:state-agent]
+                  :as this} msg]
+            (when-let [ex (agent-error state-agent)]
+              (println "Logging Agent Failed:\n"
+                       (exception-details ex))
+              (let [last-state @state-agent]
+                (println "Logging Agent State:\n"
+                         last-state)
+                (restart-agent state-agent last-state)))
+            ;; Creating an exception that we're going to throw away
+            ;; for almost every log message seems really wasteful.
+            (let [get-caller-stack (RuntimeException. "Q: Is there a cheaper way to get the call stack?")]
+              (send state-agent (fn [state entry]
+                                  (print (format-log-string get-caller-stack entry))
+                                  state)
+                    msg)))
+          ;; Q: Is there any point to calling .flush
+          ;; on STDOUT?
+          ;; A: Not according to stackoverflow.
+          ;; It flushes itself after every CR/LF
+          (flush! [_]
+            (send state-agent #(update % ::flush-count inc)))))
+
 (s/fdef merge-entries
         :args (s/cat :xs ::weald/entries
                      :ys ::weald/entries)
@@ -244,10 +244,8 @@
   ;; c) doing the sort
   ;; d) converting back to vectors
   ;; Then again, if you're letting your logs build deeply
-  ;; enough in memories between flushes that this matters,
-  ;; you should probably
-  ;; consider the dangers of losing entries to things like
-  ;; exceptions
+  ;; enough in memory between flushes that this matters,
+  ;; you probably have other problems.
   (let [result (concat xs ys)]
     (vec (distinct (sort (fn [x y]
                            (compare [(::weald/lamport x) (::weald/time x) (weald/log-level-values (::weald/level x)) (::weald/message x)]
@@ -258,6 +256,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Public
 
+;; TODO: Put these into a map where the values are a numeric
+;; indication of severity. Then build these by iterating over
+;; the map keys.
+;; This will make it easier for things like tools for
+;; displaying the logs make judgments about ways to display
+;; (or not) based on severity.
 (deflogger trace)
 (deflogger debug)
 (deflogger info)
@@ -280,8 +284,9 @@
 
 (declare get-official-clock)
 (s/fdef init
-        :args (s/cat :context ::weald/context
-                     :start-time ::weald/lamport)
+  :args (s/or :time-zero (s/cat :context ::weald/context)
+              :existing-clock (s/cat :context ::weald/context
+                                     :start-time ::weald/lamport))
         :ret ::weald/state)
 (defn init
   ([context start-clock]
@@ -332,6 +337,11 @@
                      :logs ::weald/state)
         :ret ::weald/state)
 ;; Do what I can to keep local clocks synchronized
+;; TODO: Allow external libraries to initialize this.
+;; It would greatly simplify sharing.
+;; As long as I'm breaking things anyway, might as
+;; well add a requirement to initialize this.
+;; It's also tempting to make this a Protocol.
 (let [my-lamport (atom 0)]
   (defn get-official-clock
     []
@@ -339,20 +349,25 @@
   ;; Just for debugging and REPL development
   (comment (get-official-clock))
 
+  ;; WARNING:
+  ;; This is changing in a breaking way. Make sure the change
+  ;; propagates!
   (s/fdef do-sync-clock
-          :args (s/cat :log-state ::weald/state)
-          :ret ::weald/state)
+          :args (s/cat :remote-clock ::weald/lamport)
+          :ret ::weald/lamport)
   (defn do-sync-clock
     "Synchronize my clock with a state's"
-    [log-state]
-    (let [{:keys [::weald/lamport]} log-state]
-      (swap! my-lamport max lamport)
-      (assoc log-state ::weald/lamport @my-lamport)))
+    ;; TODO: Just use a plain int for the arg/ret
+    ;; That makes it friendlier for using this to coordinate for
+    ;; bigger-picture libraries like the networking pieces where this
+    ;; really starts to matter
+    [remote-lamport]
+    (swap! my-lamport max remote-lamport))
 
   (defn flush-logs!
     "For the side-effects to write the accumulated logs.
 
-  Returns a fresh set of log entries"
+     Returns a fresh set of log entries"
     ;; TODO: Reverse these parameters.
     ;; So I can thread-first log-state through
     ;; log calls into this
@@ -374,7 +389,8 @@
         (.log! logger message))
       (.flush! logger)
 
-      (assoc (do-sync-clock log-state)
+      (assoc log-state
+             ::weald/log-state (do-sync-clock (::weald/log-state log-state))
              ::weald/entries []))))
 
 (s/fdef synchronize
@@ -468,3 +484,16 @@ show up later."
          ::weald/entries combined-entries
          ::weald/lamport (max (::weald/lamport x) (::weald/lamport y))}]
     (debug result ::top "Merged entries")))
+
+(s/fdef log-atomically
+  :args (s/cat :log-atom ::weald/state-atom
+               :logger ::weald/logger
+               ;; TODO: Need an fspec for this.
+               ;; And surely I have one already.
+               :log-fn any?
+               ;; Q: What's a good way to indicate & rest args?
+               :log-args any?))
+(defn log-atomically
+  [log-atom logger log-fn & args]
+  (swap! log-atom #(flush-logs! logger
+                                (apply log-fn % args))))
