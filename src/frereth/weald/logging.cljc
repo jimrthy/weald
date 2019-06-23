@@ -13,7 +13,7 @@
    [clojure.string :as str]
    [frereth.weald.logger-macro :refer [#?(:clj deflogger)
                                        add-log-entry]]
-   [frereth.weald.specs :as weald])
+   [frereth.weald.specs :as weald #?@(:cljs (:refer [Logger log!]))])
   #?(:clj (:import clojure.lang.ExceptionInfo
                   [java.io
                    BufferedWriter
@@ -23,7 +23,7 @@
   #?(:cljs (:require-macros
             [cljs.core.async.macros :refer [go]]
             [frereth.weald.logger-macro :refer [deflogger]]))
-  (:import frereth.weald.specs.Logger))
+  #?(:clj (:import frereth.weald.specs.Logger)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -256,14 +256,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Public
 
-;; This piece is far more important than it might appear at
-;; first glance.
-;; It basically defines all the logging functions.
-(doseq [k (filter
-           #(not= % 'exception)
-           (map (comp symbol name) (keys weald/log-level-values)))]
-  (eval `(deflogger ~k)))
-
+;; It would be nice to just do this by looping over the
+;; keys in weald/log-level-values for the sake of DRY.
+;; But doing that involves eval, which isn't usually
+;; available in clojurescript.
+(deflogger trace)
+(deflogger debug)
+(deflogger info)
+(deflogger warn)
+(deflogger error)
+(deflogger fatal)
 
 (defn exception
   ([log-state ex label]
@@ -348,10 +350,6 @@
           :ret ::weald/lamport)
   (defn do-sync-clock
     "Synchronize my clock with a state's"
-    ;; TODO: Just use a plain int for the arg/ret
-    ;; That makes it friendlier for using this to coordinate for
-    ;; bigger-picture libraries like the networking pieces where this
-    ;; really starts to matter
     [remote-lamport]
     (swap! my-lamport max remote-lamport))
 
@@ -480,15 +478,29 @@ show up later."
          ::weald/lamport (max (::weald/lamport x) (::weald/lamport y))}]
     (debug result ::top "Merged entries")))
 
-(s/fdef log-atomically
+(s/fdef log-atomically!
+  :args (s/cat :log-atom ::weald/state-atom
+               ;; TODO: Need an fspec for this.
+               ;; And surely I have one already.
+               :log-fn any?
+               ;; Q: What's a good way to indicate & rest args?
+               :log-args any?)
+  :ret any?)
+(defn log-atomically!
+  [log-atom log-fn & args]
+  (swap! log-atom #(apply log-fn % args)))
+
+
+(s/fdef log-and-flush-atomically!
   :args (s/cat :log-atom ::weald/state-atom
                :logger ::weald/logger
                ;; TODO: Need an fspec for this.
                ;; And surely I have one already.
                :log-fn any?
                ;; Q: What's a good way to indicate & rest args?
-               :log-args any?))
-(defn log-atomically
+               :log-args any?)
+  :ret any?)
+(defn log-and-flush-atomically!
   [log-atom logger log-fn & args]
   (swap! log-atom #(flush-logs! logger
                                 (apply log-fn % args))))

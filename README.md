@@ -18,7 +18,9 @@ A bunch of logs waiting to be cut
 
 From your shell:
 
+```sh
     > ./boot.sh cider-repl
+```
 
 Then, from emacs, use
 
@@ -36,11 +38,15 @@ From a clojure REPL in the boot.user ns, run either/both:
 
 #### Clojure
 
-    (boot (testing) (test))
+```clojure
+(boot (testing) (test))
+```
 
 #### Clojurescript
 
-    (boot (testing) (test-cljs))
+```clojure
+(boot (testing) (test-cljs))
+```
 
 ## Motivation
 
@@ -111,28 +117,40 @@ so I've run with it.
 
 Maven coordinates:
 
-    [com.frereth/weald "version"]
+```clojure
+[com.frereth/weald "version"]
+```
 
 Run
 
-    (require '[frereth-weald.logging :as log])
+```clojure
+(require '[frereth-weald.logging :as log])
+```
 
 or add that to your ns.
 
+### Globally
+
 Initialize a Log State:
 
-    (def log-state (log/init "Meaningful Identifier"))
+```clojure
+(def log-state (log/init "Meaningful Identifier"))
+```
 
 Add log entries to it:
 
-    (alter-var-root #'log-state #(log/info %
-                                           ::location-identifier
-                                           "Message summary"
-                                           {::details "about environment"}))
+```clojure
+(alter-var-root #'log-state #(log/info %
+                                       ::location-identifier
+                                       "Message summary"
+                                       {::details "about environment"}))
+```
 
 Create a Logger instance that writes to STDOUT:
 
-    (def logger (log/std-out-log-factory))
+```clojure
+(def logger (log/std-out-log-factory))
+```
 
 Other built-in Logger options are:
 
@@ -144,43 +162,68 @@ Other built-in Logger options are:
 
 Clear the accumulated log entries and flush them to STDOUT:
 
-    (alter-var-root #'log-state #(log/flush-logs logger %)
+```clojure
+(alter-var-root #'log-state #(log/flush-logs logger %)
+```
 
 Fork an empty copy with the same lamport clock:
 
-    (let [child (log/clean-fork log-state ::child-context-marker)]
-       ...)
+```clojure
+(let [child (log/clean-fork log-state ::child-context-marker)]
+   ...)
+```
 
 Consolidate the Lamport clocks between two log-state instances:
 
-    (let [log1 (log/info log1 ::foo)
-          log2 (log/info log2 ::foo)
-          [log1 log2] (log/synchronize log1 log2)]
-      ...)
+```clojure
+(let [log1 (log/info log1 ::foo)
+      log2 (log/info log2 ::foo)
+      [log1 log2] (log/synchronize log1 log2)]
+  ...)
+```
 
 ### System/Component
 
-Calling alter-var-root for every log message has its pros and cons.
+Calling `alter-var-root` for every log message has its pros and cons.
 
 More often, it will make more sense for both the log-state and logger
 to be part of your [System](https://github.com/stuartsierra/component).
 
 In this case, you'll wind up writing a lot of functions that look like
 
-    (defn foo
-      [{:keys [:log-state
-               :logger]
-        :as system}]
-      (let [log-state (log/debug log-state ::foo "top")
-            {:keys [:log-state]} (bar (assoc system
-                                             :log-state log-state))
-            {:keys [:log-state]} (baz (assoc system
-                                             :log-state log-state))
-            log-state (log/flush-logs! logger log-state)]
-        (assoc state
-               :log-state log-state)))
+```clojure
+(defn foo
+  [{:keys [:log-state
+           :logger]
+    :as system}]
+  (let [log-state (log/debug log-state ::foo "top")
+        {:keys [:log-state]} (bar (assoc system
+                                         :log-state log-state))
+        {:keys [:log-state]} (baz (assoc system
+                                         :log-state log-state))
+        log-state (log/flush-logs! logger log-state)]
+    (assoc state
+           :log-state log-state)))
+```
 
+### Logging Atoms
 
+One compromise between those two extremes is to use a
+`:frereth.weald.specs/log-state-atom` as your component instead.
+
+Then call something like
+`(frereth.weald.logging/log-and-flush-atomically! log-atom logger
+frereth.weald.logging/${logging-function}
+${normal-log-function-arguments})` to
+update and flush it in place.
+
+That function is really just a thin wrapper that calls
+`logging-function` and then `flush-logs!` inside a `swap!`.
+
+In contrast, `frereth.weald.logging/log-atomically!` does the
+same thing without the call to `flush-logs!`. That allows you
+to accumulate a few logs in memory in between the actual
+side-effects.
 
 ## More Details
 
@@ -243,12 +286,12 @@ an output stream, you'll need to implement them.
 
 It consists of 2 methods:
 
-* log!
+* `log!`
 
   This gets called with each individual log entry to send it to your
   real logging backend.
 
-* flush!
+* `flush!`
 
   Tells the logging backend to write the entries that have been queued
   up using log!
@@ -258,7 +301,9 @@ clocks. flush-logs! is part of a lexical closure that tracks the
 Loggers' Lamport clock. The log-state that it returns will have its
 ::lamport set to
 
-    (inc (max (::lamport log-state) logger-clock))
+```clojure
+(inc (max (::lamport log-state) logger-clock))
+```
 
 ### Output
 
@@ -283,8 +328,8 @@ I can definitely see places where macros could be useful, especially
 around exception handling. But that seems like something much bigger
 and more invasive.
 
-So far, I've been using this in one personal project for about a
-year now.
+So far, I've been using this in one personal project for almost 2
+years now. It has not changed much in that time.
 
 Having the Lamport clock, current thread name, context, and label
 associated with each log entry has been immensely helpful.
@@ -366,6 +411,12 @@ about and the accumulated log-state.
 If you mess up and try to write to a nil log-state, you'll get an
 entry with  message about "Desperation warning: missing clock among
 falsey log-state".
+
+## Publishing to clojars
+
+```bash
+> boot to-clojars
+```
 
 ## License
 
