@@ -76,7 +76,14 @@
                             ;; There's an extra trace message about the flush!
                             (is (= (inc expected) actual))
                             (is (= (inc expected) (count entries)))
-                            (is (= (range expected) (take expected (map :frereth-weald/details entries))))
+                            (let [range-expected (range expected)
+                                  entries-expected (take expected (map :frereth-weald/details entries))]
+                              (when (not= range-expected entries-expected)
+                                (println "Mismatch:\n" range-expected
+                                         "\nnot=" entries-expected
+                                         "\nExtracted from\n" entries)
+                                ;; Q: How on Earth is this passing?
+                                (is (= range-expected entries-expected))))
                             (if (and (= actual (inc expected))
                                      (= (count entries) (inc expected))
                                      (= (take expected (map :frereth-weald/details entries)) (range expected)))

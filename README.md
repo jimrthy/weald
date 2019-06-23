@@ -16,7 +16,9 @@ A bunch of logs waiting to be cut
 
 ### CIDER interaction
 
-    boot cider-repl
+From your shell:
+
+    > ./boot.sh cider-repl
 
 Then, from emacs, use
 
@@ -24,13 +26,19 @@ Then, from emacs, use
 
 to localhost on port 32767.
 
-(I've had issues trying to use cider-jack-in over SSH).
+(I've had issues trying to use cider-jack-in over SSH, but that will probably work fine for most).
+
+That will put you in the `user` ns.
 
 ### Testing
 
-#### Clojurescript
+From a clojure REPL in the boot.user ns, run either/both:
 
-From a clojure REPL in the boot.user ns:
+#### Clojure
+
+    (boot (testing) (test))
+
+#### Clojurescript
 
     (boot (testing) (test-cljs))
 
@@ -361,6 +369,6 @@ falsey log-state".
 
 ## License
 
-Copyright © 2018 James Gatannah
+Copyright © 2018-2019 James Gatannah
 
 Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.

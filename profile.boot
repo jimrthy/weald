@@ -15,7 +15,7 @@
   ;; Stick with this version for now.
   (swap! @(resolve 'boot.repl/*default-dependencies*)
          concat '[[org.clojure/tools.nrepl "0.2.12"]
-                  [cider/cider-nrepl "0.18.0"]
+                  [cider/cider-nrepl "0.21.1"]
                   [refactor-nrepl "2.4.0"]])
 
   (swap! @(resolve 'boot.repl/*default-middleware*)

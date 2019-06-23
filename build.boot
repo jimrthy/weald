@@ -42,7 +42,7 @@
 (def version #_"0.0.5-SNAPSHOT" (deduce-version-from-git))
 
 (set-env! :resource-paths #{"src"}
-          :dependencies '[[adzerk/bootlaces "0.1.13" :scope "test"]
+          :dependencies '[[adzerk/bootlaces "0.2.0" :scope "test"]
                           [adzerk/boot-cljs "2.1.5" :scope "test"]
                           [adzerk/boot-test "RELEASE" :scope "test"]
                           [binaryage/devtools "0.9.10" :scope "test" :exclusions [org.clojure/tools.reader]]
@@ -57,16 +57,16 @@
                           ;; But annoying for clojure projects which really shouldn't need it.
                           ;; Q: Which approach is worse?
                           [org.clojure/clojurescript "1.9.946" :scope "provided" :exclusions [org.clojure/clojure]]
-                          [org.clojure/core.async "0.4.474" :exclusions [org.clojure/clojure
+                          [org.clojure/core.async "0.4.500" :exclusions [org.clojure/clojure
                                                                          org.clojure/tools.reader]]
                           [org.clojure/spec.alpha "0.2.176"]
                           ;; FIXME: Move this to the testing task.
-                          ;; Don't want to depend on it in general.
-                          [org.clojure/test.check "0.10.0-alpha3" :scope "test" :exclusions [org.clojure/clojure]]
+                          ;; Don't want it cluttering up the general dependencies here
+                          [org.clojure/test.check "0.10.0-alpha4" :scope "test" :exclusions [org.clojure/clojure]]
                           ;; TODO: Move this into the dev task
                           ;; (sadly, it isn't a straight copy/paste)
                           [samestep/boot-refresh "0.1.0" :scope "test" :exclusions [org.clojure/clojure]]
-                          [tolitius/boot-check "0.1.11" :scope "test" :exclusions [org.clojure/clojure]]])
+                          [tolitius/boot-check "0.1.12" :scope "test" :exclusions [org.clojure/clojure]]])
 
 (require '[adzerk.bootlaces :refer [bootlaces! build-jar push-snapshot push-release]]
          '[adzerk.boot-cljs :refer [cljs]]

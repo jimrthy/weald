@@ -256,17 +256,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Public
 
-;; TODO: Put these into a map where the values are a numeric
-;; indication of severity. Then build these by iterating over
-;; the map keys.
-;; This will make it easier for things like tools for
-;; displaying the logs make judgments about ways to display
-;; (or not) based on severity.
-(deflogger trace)
-(deflogger debug)
-(deflogger info)
-(deflogger warn)
-(deflogger error)
+;; This piece is far more important than it might appear at
+;; first glance.
+;; It basically defines all the logging functions.
+(doseq [k (filter
+           #(not= % 'exception)
+           (map (comp symbol name) (keys weald/log-level-values)))]
+  (eval `(deflogger ~k)))
+
 
 (defn exception
   ([log-state ex label]
@@ -279,8 +276,6 @@
    (let [details {::original-details original-details
                   ::problem (exception-details ex)}]
      (add-log-entry log-state ::exception label message details))))
-
-(deflogger fatal)
 
 (declare get-official-clock)
 (s/fdef init
@@ -332,10 +327,6 @@
           [stream]
           (->StreamLogger stream)))
 
-(s/fdef flush-logs!
-        :args (s/cat :logger ::weald/logger
-                     :logs ::weald/state)
-        :ret ::weald/state)
 ;; Do what I can to keep local clocks synchronized
 ;; TODO: Allow external libraries to initialize this.
 ;; It would greatly simplify sharing.
@@ -364,6 +355,10 @@
     [remote-lamport]
     (swap! my-lamport max remote-lamport))
 
+  (s/fdef flush-logs!
+    :args (s/cat :logger ::weald/logger
+                 :logs ::weald/state)
+    :ret ::weald/state)
   (defn flush-logs!
     "For the side-effects to write the accumulated logs.
 
@@ -390,7 +385,7 @@
       (.flush! logger)
 
       (assoc log-state
-             ::weald/log-state (do-sync-clock (::weald/log-state log-state))
+             ::weald/log-state (do-sync-clock lamport)
              ::weald/entries []))))
 
 (s/fdef synchronize
