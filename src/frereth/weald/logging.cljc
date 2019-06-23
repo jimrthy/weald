@@ -487,20 +487,18 @@ show up later."
                :log-args any?)
   :ret any?)
 (defn log-atomically!
+  "Accumulate log messages into an atom
+
+  This can frequently be more convenient than returning the updated
+  state."
   [log-atom log-fn & args]
   (swap! log-atom #(apply log-fn % args)))
 
-
-(s/fdef log-and-flush-atomically!
+(s/fdef flush-atomically!
   :args (s/cat :log-atom ::weald/state-atom
-               :logger ::weald/logger
-               ;; TODO: Need an fspec for this.
-               ;; And surely I have one already.
-               :log-fn any?
-               ;; Q: What's a good way to indicate & rest args?
-               :log-args any?)
+               :logger ::weald/logger)
   :ret any?)
-(defn log-and-flush-atomically!
-  [log-atom logger log-fn & args]
-  (swap! log-atom #(flush-logs! logger
-                                (apply log-fn % args))))
+(defn flush-atomically!
+  "Flush an accumulation of log messages"
+  [logger log-atom]
+  (swap! log-atom #(flush-logs! logger %)))

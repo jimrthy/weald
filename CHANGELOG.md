@@ -8,7 +8,7 @@
   into this functionality. Because, really, I need it for networking
   endpoints.
 * Improved clojurescript support
-* Added log-atomically! and log-and-flush-atomically! because it's
+* Added log-atomically! and flush-atomically! because it's
   significantly more convenient to accumulate the log entries in
   an atom than using the fully functional approach with which I
   started.

@@ -212,18 +212,11 @@ One compromise between those two extremes is to use a
 `:frereth.weald.specs/log-state-atom` as your component instead.
 
 Then call something like
-`(frereth.weald.logging/log-and-flush-atomically! log-atom logger
+`(frereth.weald.logging/log-atomically! log-atom
 frereth.weald.logging/${logging-function}
 ${normal-log-function-arguments})` to
-update and flush it in place.
-
-That function is really just a thin wrapper that calls
-`logging-function` and then `flush-logs!` inside a `swap!`.
-
-In contrast, `frereth.weald.logging/log-atomically!` does the
-same thing without the call to `flush-logs!`. That allows you
-to accumulate a few logs in memory in between the actual
-side-effects.
+accumulate log entries until you're ready to flush them
+using `(frereth.weald.logging/flush-atomically! logger log-atom)`.
 
 ## More Details
 
