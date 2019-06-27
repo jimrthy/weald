@@ -107,7 +107,7 @@
                              ;; must be canonicalized.
                              ;; The second param is "a map of library names to
                              ;; decoded source maps."
-                             :cljs (s-t/mapped-stacktrace-str (.-stack ex) {}))
+                             :cljs #_(s-t/mapped-stacktrace-str (.-stack ex) {}) (.-stack ex))
               base {::stack stack-trace
                     ::exception ex}
               with-details (if (instance? ExceptionInfo ex)

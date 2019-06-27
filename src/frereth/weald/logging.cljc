@@ -378,13 +378,18 @@
                                          ::top
                                          "flushing"
                                          {::weald/context context})]
-      (doseq [message (::weald/entries log-state)]
-        (.log! logger message))
-      (.flush! logger)
+      (try
+        (doseq [message (::weald/entries log-state)]
+          (weald/log! logger message))
+        (weald/flush! logger)
 
-      (assoc log-state
-             ::weald/log-state (do-sync-clock lamport)
-             ::weald/entries []))))
+        (assoc log-state
+               ::weald/log-state (do-sync-clock lamport)
+               ::weald/entries [])
+        (catch #?(:clj RuntimeException :cljs :default) ex
+          (println (str ex "\nTrying to flush logs for\n"
+                        logger ", a " (type logger)))
+          (throw ex))))))
 
 (s/fdef synchronize
         :args (s/cat :lhs ::weald/state
