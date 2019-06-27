@@ -218,6 +218,19 @@ ${normal-log-function-arguments})` to
 accumulate log entries until you're ready to flush them
 using `(frereth.weald.logging/flush-atomically! logger log-atom)`.
 
+#### Explanation
+
+A lot of times, the functions that need logging the most are the ones
+that get called for their side-effects.
+
+In general, in clojure, we tend to have those functions return nil to
+emphasize their special dangerous nature. That quits working when you
+need to return an updated log state.
+
+This can also get annoying when you're using things like thrush
+operators but your functions need to return both the thing you care
+about and the accumulated log-state.
+
 ## More Details
 
 I've broken the basic idea of logging into 2 pieces:
@@ -313,9 +326,9 @@ hashmap are:
 
 ## Status
 
-This library is currently pretty experimental. I don't see the
+The implementation is currently pretty experimental. I don't see the
 main interface changing much, since the fundamental idea is pretty
-thoroughly established.
+simple and well established.
 
 I can definitely see places where macros could be useful, especially
 around exception handling. But that seems like something much bigger
@@ -336,13 +349,12 @@ can just edn/read is much more convenient than formatting them into a
 message string.
 
 Writing a Logger for a "real" logging library won't quite be trivial.
-But the fact that each log entry is structured and includes the log
-level should make it worthwhile.
+But it should be easy. And the fact that each log entry is structured
+and includes the log level should make it worthwhile.
 
-TODO item: add samples.
+TODO item: add implementation samples.
 
-I obviously think that it's promising enough that I'm planning to
-make it public.
+I obviously think that it's promising enough to share.
 
 ### Downsides
 
@@ -363,41 +375,29 @@ I need to put more thought into this.
 
 #### Exceptions
 
-If you throw one, you're very likely to get weird logging artifacts.
+When you throw one, you're very likely to get weird logging artifacts.
 
 There's a good chance you'll have some sort of accumulated log-state
-outside the (try) block, unless you flush before entering.
+outside the (try) block, unless you `flush!` before entering.
 
-If you don't flush before throwing the exception, any log entries
-accumulated between the outer (try) and your (throw) will be lost.
+If you don't `flush!` before throwing the exception, any log entries
+accumulated between the outer `(try)` and your `(throw)` will be lost.
 
 #### Duplicates
 
 If you flush the same log-state twice, you'll obviously get
 duplicate entries in the output.
 
-One way for this happens is to start a (try) block
-without flushing, flush just before throwing an exception, and
-then flush the state from the outer logs in a (finally) clause.
+One way for this happens is to start a `(try)` block
+without calling `(flush!)`, call `(flush!)` just before throwing
+an exception, and then flush the state from the outer logs in a
+`(finally)` clause.
 
 Other ways are usually variations of the same theme. I've run into
-this both
+this both when:
 
 * setting up a callback as a partial with some accumulated log state
 * entering a loop with one that hasn't been freshly flushed.
-
-#### Odd Structure
-
-A lot of times, the functions that need logging the most are the ones
-that get called for their side-effects.
-
-In general, in clojure, we tend to have those functions return nil to
-emphasize their special dangerous nature. That quits working when you
-need to return an updated log state.
-
-This can also get annoying when you're using things like thrush
-operators but your functions need to return both the thing you care
-about and the accumulated log-state.
 
 #### Misleading Errors
 

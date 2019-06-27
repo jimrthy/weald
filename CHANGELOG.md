@@ -1,4 +1,4 @@
-# 0.0.4 (pending)
+# 0.0.4 - 2019-JUN-26
 
 * Breaking change: frereth.weald.logging/do-sync-clock now operates on
   a ::frereth.weald.specs/lamport (which is really just a nat-int?)

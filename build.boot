@@ -156,4 +156,4 @@
   "Publish to clojars from your current branch"
   []
   (task-options! push {:ensure-branch nil})
-  (comp (set-version) (build-jar) (push-release)))
+  (comp (set-version) (pom) (build-jar) (push-release)))
