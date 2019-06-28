@@ -349,7 +349,9 @@
           :args (s/cat :remote-clock ::weald/lamport)
           :ret ::weald/lamport)
   (defn do-sync-clock
-    "Synchronize my clock with a state's"
+    "Synchronize my clock with another's
+
+  Low-level function used to build do-synchronize-clock-with-state"
     [remote-lamport]
     (swap! my-lamport max remote-lamport))
 
@@ -390,6 +392,14 @@
           (println (str ex "\nTrying to flush logs for\n"
                         logger ", a " (type logger)))
           (throw ex))))))
+
+(s/fdef do-synchronize-clock-with-state
+  :args (s/cat :state ::weald/state)
+  :ret ::weald/state)
+(defn do-synchronize-clock-with-state
+  "Coordinate state's clock with our internal counter"
+  [state]
+  (update state ::weald/lamport do-sync-clock))
 
 (s/fdef synchronize
         :args (s/cat :lhs ::weald/state
