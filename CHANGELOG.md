@@ -1,4 +1,4 @@
-# 0.0.4 - 2019-JUN-26
+# 0.0.4 - 2019-JUL-07
 
 * Breaking change: frereth.weald.logging/do-sync-clock now operates on
   a ::frereth.weald.specs/lamport (which is really just a nat-int?)
@@ -8,7 +8,7 @@
   into this functionality. Because, really, I need it for networking
   endpoints.
 * Improved clojurescript support
-* Added log-atomically! and flush-atomically! because it's
+* Added atomically! and flush-atomically! because it's
   significantly more convenient to accumulate the log entries in
   an atom than using the fully functional approach with which I
   started.

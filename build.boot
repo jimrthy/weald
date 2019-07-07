@@ -149,7 +149,7 @@
   ;; Except that doesn't have access to the defined in here, such
   ;; as...well, almost any of what it actually uses.
   ;; Q: Should they move to there also?
-  (let [port (or port 32767)]
+  (let [port (or port 32766)]
     (comp (dev) (testing) (check-conflicts) (cider) (javac) (repl :port port :bind "0.0.0.0"))))
 
 (deftask to-clojars

@@ -122,3 +122,26 @@
            :cljs (catch :default ex1
                    (println "Inner exception" ex1 "triggered by trying to handle" ex1))))
       (throw ex))))
+
+(deftest check-atomically
+  (testing "Atomic Operations"
+    (let [label ::check-atomically
+          log-state-atom (atom (log/init ::atomicity-checks))]
+      (testing "Add an entry"
+        (log/atomically! log-state-atom
+                         log/trace
+                         label
+                         "tracing")
+        (is (= (-> log-state-atom
+                   deref
+                   ::weald/entries
+                   count)
+               1)))
+      (let [logger (log/std-out-log-factory)]
+        (testing "Flushing"
+          (log/flush-atomically! logger log-state-atom)
+          (is (= (-> log-state-atom
+                   deref
+                   ::weald/entries
+                   count)
+               0)))))))

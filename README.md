@@ -26,9 +26,10 @@ Then, from emacs, use
 
     M-x cider-connect
 
-to localhost on port 32767.
+to localhost on port 32766.
 
-(I've had issues trying to use cider-jack-in over SSH, but that will probably work fine for most).
+(I've had issues trying to use cider-jack-in over SSH, but I suspect
+that most people won't want to do that anyway).
 
 That will put you in the `user` ns.
 
@@ -212,7 +213,7 @@ One compromise between those two extremes is to use a
 `:frereth.weald.specs/log-state-atom` as your component instead.
 
 Then call something like
-`(frereth.weald.logging/log-atomically! log-atom
+`(frereth.weald.logging/atomically! log-atom
 frereth.weald.logging/${logging-function}
 ${normal-log-function-arguments})` to
 accumulate log entries until you're ready to flush them
@@ -407,7 +408,16 @@ falsey log-state".
 
 ## Publishing to clojars
 
+### Incremental
+
 ```bash
+> boot to-clojars
+```
+
+### Release
+
+```bash
+> git tag major.minor.release
 > boot to-clojars
 ```
 

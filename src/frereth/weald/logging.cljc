@@ -232,7 +232,9 @@
                    (count ret))))
         :ret ::weald/entries)
 (defn merge-entries
-  "Note that this is a relatively expensive operation"
+  "Combine entries from two sets of logs
+
+  Note that this is a relatively expensive operation"
   [xs ys]
   ;; This is something that's fairly trivial with
   ;; c++ and iterators.
@@ -487,13 +489,13 @@ show up later."
   [x y]
   (let [combined-entries (merge-entries (::weald/entries x) (::weald/entries y))
         result
-        ;; There really isn't a good way to pick a winner if this conflicts
+        ;; There really isn't a good way to pick a winner if the context conflicts
         {::weald/context (::weald/context x)
          ::weald/entries combined-entries
          ::weald/lamport (max (::weald/lamport x) (::weald/lamport y))}]
     (debug result ::top "Merged entries")))
 
-(s/fdef log-atomically!
+(s/fdef atomically!
   :args (s/cat :log-atom ::weald/state-atom
                ;; TODO: Need an fspec for this.
                ;; And surely I have one already.
@@ -501,7 +503,7 @@ show up later."
                ;; Q: What's a good way to indicate & rest args?
                :log-args any?)
   :ret any?)
-(defn log-atomically!
+(defn atomically!
   "Accumulate log messages into an atom
 
   This can frequently be more convenient than returning the updated
