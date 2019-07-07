@@ -1,3 +1,8 @@
+# 0.0.5 - ??
+
+* Breaking change: renamed log-atomically! to atomically!
+  Because typing log/log-atomically! got old very quickly.
+
 # 0.0.4 - 2019-JUL-07
 
 * Breaking change: frereth.weald.logging/do-sync-clock now operates on
@@ -8,7 +13,7 @@
   into this functionality. Because, really, I need it for networking
   endpoints.
 * Improved clojurescript support
-* Added atomically! and flush-atomically! because it's
+* Added log-atomically! and flush-atomically! because it's
   significantly more convenient to accumulate the log entries in
   an atom than using the fully functional approach with which I
   started.
